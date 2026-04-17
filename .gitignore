@@ -11,6 +11,9 @@ frontend/dist/
 .env.*
 !.env.example
 
+# local project memory
+.ia
+
 # logs
 *.log
 npm-debug.log*
