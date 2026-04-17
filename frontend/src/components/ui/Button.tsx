@@ -31,7 +31,7 @@ export function Button({
   return (
     <button
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-lg border-0 font-bold transition disabled:cursor-not-allowed disabled:opacity-60',
+        'inline-flex items-center justify-center gap-2 rounded-lg border-0 font-medium transition disabled:cursor-not-allowed disabled:opacity-60',
         variants[variant],
         sizes[size],
         className,

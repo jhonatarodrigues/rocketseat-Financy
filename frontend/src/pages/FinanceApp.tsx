@@ -145,8 +145,8 @@ type TopNavbarProps = {
 
 function TopNavbar({ activePage, initials, onNavigate }: TopNavbarProps) {
   return (
-    <header className="h-[69px] border-b border-[#e5e7eb] bg-white">
-      <div className="mx-auto flex h-full w-full max-w-[1280px] items-center justify-between px-6 sm:px-12">
+    <header className="border-b border-[#e5e7eb] bg-white">
+      <div className="mx-auto flex h-[69px] w-full max-w-[1280px] items-center justify-between px-6 sm:px-12">
         <button
           type="button"
           className="flex h-6 w-[100px] items-center gap-[8px]"
@@ -176,6 +176,17 @@ function TopNavbar({ activePage, initials, onNavigate }: TopNavbarProps) {
           {initials}
         </button>
       </div>
+      <nav className="mx-auto flex h-12 w-full max-w-[1280px] items-center justify-center gap-5 border-t border-[#e5e7eb] px-6 text-sm leading-5 text-[#4b5563] md:hidden">
+        <NavButton active={activePage === 'dashboard'} onClick={() => onNavigate('dashboard')}>
+          Dashboard
+        </NavButton>
+        <NavButton active={activePage === 'transactions'} onClick={() => onNavigate('transactions')}>
+          Transações
+        </NavButton>
+        <NavButton active={activePage === 'categories'} onClick={() => onNavigate('categories')}>
+          Categorias
+        </NavButton>
+      </nav>
     </header>
   )
 }

@@ -59,7 +59,7 @@ export function TransactionDialog({
 
   return (
     <Dialog
-      title={transaction ? 'Editar transacao' : 'Nova transacao'}
+      title={transaction ? 'Editar transação' : 'Nova transação'}
       onClose={onClose}
       footer={
         <>
@@ -67,13 +67,13 @@ export function TransactionDialog({
             Cancelar
           </Button>
           <Button type="submit" form="transaction-form" disabled={isSubmitting}>
-            Salvar transacao
+            Salvar transação
           </Button>
         </>
       }
     >
       <form id="transaction-form" className="grid gap-4" onSubmit={handleSubmit(submitForm)}>
-        <Field label="Titulo" error={errors.title?.message}>
+        <Field label="Título" error={errors.title?.message}>
           <Input hasError={Boolean(errors.title)} placeholder="Ex: Mercado" {...register('title')} />
         </Field>
 
@@ -89,7 +89,7 @@ export function TransactionDialog({
 
         <Field label="Tipo" error={errors.type?.message}>
           <Select hasError={Boolean(errors.type)} {...register('type')}>
-            <option value="expense">Saida</option>
+            <option value="expense">Saída</option>
             <option value="income">Entrada</option>
           </Select>
         </Field>

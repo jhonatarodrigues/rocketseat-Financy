@@ -8,7 +8,7 @@ type FieldProps = PropsWithChildren<{
 
 export function Field({ label, error, children }: FieldProps) {
   return (
-    <label className="grid gap-2 text-sm font-semibold text-app-muted">
+    <label className="grid gap-2 text-sm font-medium leading-5 text-[#374151]">
       <span>{label}</span>
       {children}
       {error ? <span className="text-xs font-semibold text-app-danger">{error}</span> : null}
@@ -24,7 +24,7 @@ export function Input({ className, hasError, ...props }: InputProps) {
   return (
     <input
       className={cn(
-        'min-h-11 w-full rounded-lg border bg-app-surface px-3.5 text-app-text outline-none transition placeholder:text-app-muted/70 focus:border-app-primary focus:ring-4 focus:ring-app-primary-soft',
+        'h-12 w-full rounded-lg border bg-white px-[13px] py-[15px] text-base leading-[18px] text-[#111827] outline-none transition placeholder:text-[#9ca3af] focus:border-app-primary focus:ring-4 focus:ring-app-primary-soft',
         hasError ? 'border-app-danger' : 'border-app-border',
         className,
       )}
@@ -41,7 +41,7 @@ export function Select({ className, hasError, ...props }: SelectProps) {
   return (
     <select
       className={cn(
-        'min-h-11 w-full rounded-lg border bg-app-surface px-3.5 text-app-text outline-none transition focus:border-app-primary focus:ring-4 focus:ring-app-primary-soft',
+        'h-12 w-full rounded-lg border bg-white px-[13px] py-[15px] text-base leading-[18px] text-[#111827] outline-none transition focus:border-app-primary focus:ring-4 focus:ring-app-primary-soft',
         hasError ? 'border-app-danger' : 'border-app-border',
         className,
       )}
