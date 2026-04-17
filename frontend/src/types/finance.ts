@@ -8,6 +8,11 @@ export type Category = {
   id: string
   name: string
   color: string
+  amount?: number
+  description?: string
+  icon?: string
+  itemsCount?: number
+  tagClassName?: string
 }
 
 export type TransactionType = 'income' | 'expense'
@@ -19,6 +24,7 @@ export type Transaction = {
   type: TransactionType
   date: string
   categoryId: string
+  icon?: string
 }
 
 export type LoginInput = {

@@ -1,6 +1,6 @@
-import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
 import { useAuth } from './features/auth/hooks/useAuth'
+import { FinanceApp } from './pages/FinanceApp'
 
 function App() {
   const auth = useAuth()
@@ -9,7 +9,7 @@ function App() {
     return <LoginPage onLogin={auth.login} onRegister={auth.register} />
   }
 
-  return <DashboardPage user={auth.user} onLogout={auth.logout} />
+  return <FinanceApp user={auth.user} onLogout={auth.logout} />
 }
 
 export default App
