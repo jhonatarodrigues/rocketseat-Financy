@@ -8,9 +8,7 @@ import {
   HeartPulse,
   PiggyBank,
   ShoppingCart,
-  Tag,
   Ticket,
-  ToolCase,
   Utensils,
 } from 'lucide-react'
 import { categorySchema, type CategoryFormValues } from '../../features/finance/schemas/categorySchema'
@@ -27,24 +25,22 @@ type CategoryDialogProps = {
 
 const initialForm: CategoryInput = {
   name: '',
-  color: '#1f6f43',
+  color: '#3b82f6',
   description: '',
-  icon: 'tag',
+  icon: 'utensils',
 }
 
-const categoryColors = ['#2563eb', '#db2777', '#15803d', '#ea580c', '#1f6f43', '#dc2626', '#9333ea', '#a16207']
+const categoryColors = ['#3b82f6', '#db2777', '#16a34a', '#ea580c', '#ef4444', '#9333ea', '#a16207']
 
 const categoryIcons = [
   { icon: Utensils, label: 'Alimentação', value: 'utensils' },
-  { icon: Ticket, label: 'Lazer', value: 'ticket' },
+  { icon: Ticket, label: 'Entretenimento', value: 'ticket' },
   { icon: PiggyBank, label: 'Investimento', value: 'piggy-bank' },
   { icon: ShoppingCart, label: 'Mercado', value: 'shopping-cart' },
-  { icon: BriefcaseBusiness, label: 'Trabalho', value: 'briefcase' },
+  { icon: BriefcaseBusiness, label: 'Salário', value: 'briefcase' },
   { icon: HeartPulse, label: 'Saúde', value: 'heart-pulse' },
   { icon: CarFront, label: 'Transporte', value: 'car' },
   { icon: CalendarDays, label: 'Utilidades', value: 'calendar' },
-  { icon: ToolCase, label: 'Serviços', value: 'tool-case' },
-  { icon: Tag, label: 'Geral', value: 'tag' },
 ]
 
 export function CategoryDialog({ category, onClose, onSubmit }: CategoryDialogProps) {
@@ -61,7 +57,7 @@ export function CategoryDialog({ category, onClose, onSubmit }: CategoryDialogPr
         name: category.name,
         color: category.color,
         description: category.description ?? '',
-        icon: category.icon ?? 'tag',
+        icon: category.icon ?? 'utensils',
       }
       : initialForm,
   })
@@ -103,7 +99,7 @@ export function CategoryDialog({ category, onClose, onSubmit }: CategoryDialogPr
 
         <Field label="Ícone" error={errors.icon?.message}>
           <input type="hidden" {...register('icon')} />
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             {categoryIcons.map((option) => {
               const Icon = option.icon
               const isActive = selectedIcon === option.value
@@ -118,7 +114,7 @@ export function CategoryDialog({ category, onClose, onSubmit }: CategoryDialogPr
                       : 'grid h-12 place-items-center rounded-lg border border-[#d1d5db] bg-white text-[#4b5563]'
                   }
                   onClick={() => setValue('icon', option.value, { shouldDirty: true, shouldValidate: true })}
-                  aria-label={`Selecionar icone ${option.label}`}
+                  aria-label={`Selecionar ícone ${option.label}`}
                   title={option.label}
                 >
                   <Icon size={18} />
@@ -130,7 +126,7 @@ export function CategoryDialog({ category, onClose, onSubmit }: CategoryDialogPr
 
         <Field label="Cor" error={errors.color?.message}>
           <input type="hidden" {...register('color')} />
-          <div className="grid h-12 grid-cols-8 overflow-hidden rounded-lg border border-[#d1d5db] bg-white">
+          <div className="grid h-12 grid-cols-7 overflow-hidden rounded-lg border border-[#d1d5db] bg-white">
             {categoryColors.map((color) => (
               <button
                 key={color}
