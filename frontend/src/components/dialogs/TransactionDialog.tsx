@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
+import { CircleArrowDown, CircleArrowUp } from 'lucide-react'
 import {
   transactionSchema,
   type TransactionFormValues,
@@ -34,6 +35,7 @@ export function TransactionDialog({
 }: TransactionDialogProps) {
   const {
     formState: { errors, isSubmitting },
+    control,
     handleSubmit,
     register,
   } = useForm<TransactionFormValues>({
@@ -73,25 +75,58 @@ export function TransactionDialog({
       }
     >
       <form id="transaction-form" className="grid gap-4" onSubmit={handleSubmit(submitForm)}>
+        <Controller
+          control={control}
+          name="type"
+          render={({ field }) => (
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                className={
+                  field.value === 'expense'
+                    ? 'flex h-12 items-center justify-center gap-2 rounded-lg border border-[#ef4444] bg-[#fee2e2] text-base font-medium text-[#dc2626]'
+                    : 'flex h-12 items-center justify-center gap-2 rounded-lg border border-[#d1d5db] bg-white text-base font-medium text-[#374151]'
+                }
+                onClick={() => field.onChange('expense')}
+              >
+                <CircleArrowDown size={18} />
+                Despesa
+              </button>
+              <button
+                type="button"
+                className={
+                  field.value === 'income'
+                    ? 'flex h-12 items-center justify-center gap-2 rounded-lg border border-[#16a34a] bg-[#dcfce7] text-base font-medium text-[#15803d]'
+                    : 'flex h-12 items-center justify-center gap-2 rounded-lg border border-[#d1d5db] bg-white text-base font-medium text-[#374151]'
+                }
+                onClick={() => field.onChange('income')}
+              >
+                <CircleArrowUp size={18} />
+                Receita
+              </button>
+            </div>
+          )}
+        />
+
         <Field label="Título" error={errors.title?.message}>
           <Input hasError={Boolean(errors.title)} placeholder="Ex: Mercado" {...register('title')} />
         </Field>
 
         <Field label="Valor" error={errors.amount?.message}>
-          <Input
-            min="0"
-            step="0.01"
-            type="number"
-            hasError={Boolean(errors.amount)}
-            {...register('amount', { valueAsNumber: true })}
+          <Controller
+            control={control}
+            name="amount"
+            render={({ field }) => (
+              <Input
+                inputMode="numeric"
+                hasError={Boolean(errors.amount)}
+                placeholder="R$ 0,00"
+                value={formatCurrencyMask(field.value)}
+                onBlur={field.onBlur}
+                onChange={(event) => field.onChange(parseCurrencyMask(event.target.value))}
+              />
+            )}
           />
-        </Field>
-
-        <Field label="Tipo" error={errors.type?.message}>
-          <Select hasError={Boolean(errors.type)} {...register('type')}>
-            <option value="expense">Saída</option>
-            <option value="income">Entrada</option>
-          </Select>
         </Field>
 
         <Field label="Categoria" error={errors.categoryId?.message}>
@@ -110,4 +145,27 @@ export function TransactionDialog({
       </form>
     </Dialog>
   )
+}
+
+function formatCurrencyMask(value: number) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return ''
+  }
+
+  return new Intl.NumberFormat('pt-BR', {
+    currency: 'BRL',
+    style: 'currency',
+  })
+    .format(value)
+    .replace(/\u00a0/g, ' ')
+}
+
+function parseCurrencyMask(value: string) {
+  const cents = value.replace(/\D/g, '')
+
+  if (!cents) {
+    return 0
+  }
+
+  return Number(cents) / 100
 }

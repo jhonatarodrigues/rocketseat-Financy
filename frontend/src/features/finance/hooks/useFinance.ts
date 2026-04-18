@@ -95,7 +95,9 @@ export function useFinance() {
       categoryRepository.update(categoryId, input),
     onSuccess(updatedCategory) {
       queryClient.setQueryData<Category[]>(financeQueryKeys.categories, (current = []) =>
-        current.map((category) => (category.id === updatedCategory.id ? updatedCategory : category)),
+        current.map((category) =>
+          category.id === updatedCategory.id ? { ...category, ...updatedCategory } : category,
+        ),
       )
     },
   })

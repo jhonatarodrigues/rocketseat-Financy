@@ -15,6 +15,8 @@ export const categoryRepository = {
     return delay<Category>({
       ...input,
       id: `cat-${crypto.randomUUID()}`,
+      itemsCount: 0,
+      tagClassName: getCategoryTone(input.color),
     })
   },
 
@@ -22,6 +24,7 @@ export const categoryRepository = {
     return delay<Category>({
       ...input,
       id: categoryId,
+      tagClassName: getCategoryTone(input.color),
     })
   },
 
@@ -29,4 +32,19 @@ export const categoryRepository = {
     void categoryId
     return delay(true)
   },
+}
+
+function getCategoryTone(color: string) {
+  const tones: Record<string, string> = {
+    '#2563eb': 'bg-[#dbeafe] text-[#2563eb]',
+    '#db2777': 'bg-[#fce7f3] text-[#db2777]',
+    '#15803d': 'bg-[#dcfce7] text-[#15803d]',
+    '#9333ea': 'bg-[#f3e8ff] text-[#9333ea]',
+    '#ea580c': 'bg-[#ffedd5] text-[#ea580c]',
+    '#1f6f43': 'bg-[#dcfce7] text-[#15803d]',
+    '#dc2626': 'bg-[#fee2e2] text-[#dc2626]',
+    '#a16207': 'bg-[#fef9c3] text-[#a16207]',
+  }
+
+  return tones[color] ?? 'bg-[#e5e7eb] text-[#374151]'
 }

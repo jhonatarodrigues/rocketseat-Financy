@@ -49,4 +49,6 @@ export type TransactionInput = {
 export type CategoryInput = {
   name: string
   color: string
+  description: string
+  icon: string
 }
