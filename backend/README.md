@@ -80,6 +80,7 @@ pnpm run prisma:generate  # gera Prisma Client
 pnpm run prisma:studio    # abre Prisma Studio
 pnpm run db:reset         # reseta o banco local e reaplica migrations
 pnpm run db:seed          # cria usuario e dados demo
+pnpm run test:smoke       # testa o fluxo GraphQL principal contra o servidor rodando
 ```
 
 ## Autenticacao
@@ -107,12 +108,26 @@ O token e retornado por `register` e `login`.
 - `updateCategory(input: UpdateCategoryInput!): Category!`
 - `deleteCategory(input: DeleteCategoryInput!): Boolean!`
 
+O tipo `Category` expoe `title` e `name`. Ambos carregam o mesmo valor para facilitar o consumo pelo front.
+
 ### Transacoes
 
 - `transactions: [Transaction!]!`
 - `createTransaction(input: CreateTransactionInput!): Transaction!`
 - `updateTransaction(input: UpdateTransactionInput!): Transaction!`
 - `deleteTransaction(input: DeleteTransactionInput!): Boolean!`
+
+O tipo `Transaction` expoe `description` e `title`. Ambos carregam o mesmo valor para facilitar o consumo pelo front. O campo `categoryId` tambem e retornado para preencher formularios de edicao.
+
+## Smoke test
+
+Com o servidor rodando, execute:
+
+```bash
+pnpm run test:smoke
+```
+
+Esse script cria um usuario temporario, cria categoria, cria transacao, apaga a transacao e apaga a categoria. Ele usa `BACKEND_URL` se a variavel existir; caso contrario usa `http://localhost:3333/graphql`.
 
 ## Regras implementadas
 

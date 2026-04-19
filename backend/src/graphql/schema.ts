@@ -32,6 +32,7 @@ export const schema = createSchema<GraphQLContext>({
 
     type Category {
       id: ID!
+      name: String!
       title: String!
       description: String
       icon: String!
@@ -42,10 +43,12 @@ export const schema = createSchema<GraphQLContext>({
 
     type Transaction {
       id: ID!
+      title: String!
       description: String!
       amount: Int!
       type: TransactionType!
       date: String!
+      categoryId: ID!
       category: Category!
       createdAt: String!
       updatedAt: String!
