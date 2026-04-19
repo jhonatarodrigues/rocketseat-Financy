@@ -8,7 +8,9 @@ export const createTransactionInputSchema = z.object({
   description: z.string().trim().min(1, 'Description is required'),
   amount: z.coerce.number().int().positive('Amount must be greater than zero'),
   type: transactionTypeSchema,
-  date: z.string().datetime('Date must be an ISO date'),
+  date: z.string().refine((value) => !Number.isNaN(Date.parse(value)), {
+    message: 'Date must be valid',
+  }),
   categoryId: z.string().trim().min(1, 'Category id is required'),
 });
 
