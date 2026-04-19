@@ -127,7 +127,186 @@ Com o servidor rodando, execute:
 pnpm run test:smoke
 ```
 
-Esse script cria um usuario temporario, cria categoria, cria transacao, apaga a transacao e apaga a categoria. Ele usa `BACKEND_URL` se a variavel existir; caso contrario usa `http://localhost:3333/graphql`.
+Esse script cria dois usuarios temporarios, cria categoria e transacao para o primeiro usuario, valida que o segundo usuario nao lista nem altera esses dados, apaga a transacao e apaga a categoria. Ele usa `BACKEND_URL` se a variavel existir; caso contrario usa `http://localhost:3333/graphql`.
+
+## Exemplos GraphQL
+
+### Criar Conta
+
+```graphql
+mutation Register {
+  register(
+    input: {
+      name: "Demo Financy"
+      email: "demo@financy.dev"
+      password: "123456"
+    }
+  ) {
+    token
+    user {
+      id
+      name
+      email
+    }
+  }
+}
+```
+
+### Login
+
+```graphql
+mutation Login {
+  login(input: { email: "demo@financy.dev", password: "123456" }) {
+    token
+    user {
+      id
+      name
+      email
+    }
+  }
+}
+```
+
+Use o token retornado no header das proximas operacoes:
+
+```txt
+Authorization: Bearer <token>
+```
+
+### Usuario Logado
+
+```graphql
+query Me {
+  me {
+    id
+    name
+    email
+  }
+}
+```
+
+### Listar Categorias
+
+```graphql
+query Categories {
+  categories {
+    id
+    name
+    title
+    description
+    icon
+    color
+  }
+}
+```
+
+### Criar Categoria
+
+```graphql
+mutation CreateCategory {
+  createCategory(
+    input: {
+      title: "Alimentacao"
+      description: "Mercado, restaurantes e lanches"
+      icon: "utensils"
+      color: "#2563eb"
+    }
+  ) {
+    id
+    name
+    color
+  }
+}
+```
+
+### Editar Categoria
+
+```graphql
+mutation UpdateCategory {
+  updateCategory(input: { id: "category-id", title: "Restaurantes" }) {
+    id
+    name
+    title
+  }
+}
+```
+
+### Deletar Categoria
+
+```graphql
+mutation DeleteCategory {
+  deleteCategory(input: { id: "category-id" })
+}
+```
+
+### Listar Transacoes
+
+```graphql
+query Transactions {
+  transactions {
+    id
+    title
+    description
+    amount
+    type
+    date
+    categoryId
+    category {
+      id
+      name
+      color
+    }
+  }
+}
+```
+
+### Criar Transacao
+
+```graphql
+mutation CreateTransaction {
+  createTransaction(
+    input: {
+      description: "Almoco no restaurante"
+      amount: 4590
+      type: EXPENSE
+      date: "2026-04-19"
+      categoryId: "category-id"
+    }
+  ) {
+    id
+    title
+    amount
+    type
+    categoryId
+  }
+}
+```
+
+### Editar Transacao
+
+```graphql
+mutation UpdateTransaction {
+  updateTransaction(
+    input: {
+      id: "transaction-id"
+      description: "Jantar"
+      amount: 6200
+    }
+  ) {
+    id
+    title
+    amount
+  }
+}
+```
+
+### Deletar Transacao
+
+```graphql
+mutation DeleteTransaction {
+  deleteTransaction(input: { id: "transaction-id" })
+}
+```
 
 ## Regras implementadas
 

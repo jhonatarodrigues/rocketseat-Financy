@@ -4,7 +4,6 @@ type GraphQLResponse<T> = {
 };
 
 const endpoint = process.env.BACKEND_URL ?? 'http://localhost:3333/graphql';
-const testEmail = `smoke-${Date.now()}@financy.dev`;
 const testPassword = '123456';
 
 async function request<T>(
@@ -37,8 +36,30 @@ async function request<T>(
   return json.data;
 }
 
-async function main() {
-  const register = await request<{
+async function requestWithErrors<T>(
+  query: string,
+  variables?: Record<string, unknown>,
+  token?: string,
+): Promise<GraphQLResponse<T>> {
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({
+      query,
+      variables,
+    }),
+  });
+
+  return response.json() as Promise<GraphQLResponse<T>>;
+}
+
+async function createUser(label: string) {
+  const email = `smoke-${label}-${Date.now()}@financy.dev`;
+
+  return request<{
     register: {
       token: string;
       user: {
@@ -58,16 +79,16 @@ async function main() {
     `,
     {
       input: {
-        name: 'Smoke Test',
-        email: testEmail,
+        name: `Smoke Test ${label}`,
+        email,
         password: testPassword,
       },
     },
   );
+}
 
-  const token = register.register.token;
-
-  const category = await request<{
+async function createCategory(token: string, title = 'Smoke Categoria') {
+  return request<{
     createCategory: {
       id: string;
       name: string;
@@ -85,7 +106,7 @@ async function main() {
     `,
     {
       input: {
-        title: 'Smoke Categoria',
+        title,
         description: 'Categoria criada pelo smoke test',
         icon: 'receipt-text',
         color: '#2563eb',
@@ -93,8 +114,10 @@ async function main() {
     },
     token,
   );
+}
 
-  const transaction = await request<{
+async function createTransaction(token: string, categoryId: string) {
+  return request<{
     createTransaction: {
       id: string;
       title: string;
@@ -118,11 +141,90 @@ async function main() {
         amount: 1990,
         type: 'EXPENSE',
         date: new Date().toISOString(),
-        categoryId: category.createCategory.id,
+        categoryId,
       },
     },
     token,
   );
+}
+
+function assertGraphQLError(response: GraphQLResponse<unknown>, label: string) {
+  if (!response.errors?.length) {
+    throw new Error(`${label} should have returned a GraphQL error`);
+  }
+}
+
+async function main() {
+  const owner = await createUser('owner');
+  const intruder = await createUser('intruder');
+  const ownerToken = owner.register.token;
+  const intruderToken = intruder.register.token;
+
+  const category = await createCategory(ownerToken);
+  const transaction = await createTransaction(ownerToken, category.createCategory.id);
+
+  const intruderLists = await request<{
+    categories: { id: string }[];
+    transactions: { id: string }[];
+  }>(
+    /* GraphQL */ `
+      query Lists {
+        categories {
+          id
+        }
+        transactions {
+          id
+        }
+      }
+    `,
+    undefined,
+    intruderToken,
+  );
+
+  if (intruderLists.categories.length !== 0 || intruderLists.transactions.length !== 0) {
+    throw new Error('Data isolation failed: intruder listed owner data');
+  }
+
+  const intruderUsingOwnerCategory = await requestWithErrors(
+    /* GraphQL */ `
+      mutation CreateTransaction($input: CreateTransactionInput!) {
+        createTransaction(input: $input) {
+          id
+        }
+      }
+    `,
+    {
+      input: {
+        description: 'Tentativa proibida',
+        amount: 1000,
+        type: 'EXPENSE',
+        date: new Date().toISOString(),
+        categoryId: category.createCategory.id,
+      },
+    },
+    intruderToken,
+  );
+
+  assertGraphQLError(intruderUsingOwnerCategory, 'Intruder using owner category');
+
+  const intruderUpdatingOwnerTransaction = await requestWithErrors(
+    /* GraphQL */ `
+      mutation UpdateTransaction($input: UpdateTransactionInput!) {
+        updateTransaction(input: $input) {
+          id
+        }
+      }
+    `,
+    {
+      input: {
+        id: transaction.createTransaction.id,
+        description: 'Tentativa proibida',
+      },
+    },
+    intruderToken,
+  );
+
+  assertGraphQLError(intruderUpdatingOwnerTransaction, 'Intruder updating owner transaction');
 
   await request(
     /* GraphQL */ `
@@ -135,7 +237,7 @@ async function main() {
         id: transaction.createTransaction.id,
       },
     },
-    token,
+    ownerToken,
   );
 
   await request(
@@ -149,12 +251,14 @@ async function main() {
         id: category.createCategory.id,
       },
     },
-    token,
+    ownerToken,
   );
 
   console.log('Smoke test completed');
   console.log(`Endpoint: ${endpoint}`);
-  console.log(`User: ${register.register.user.email}`);
+  console.log(`Owner: ${owner.register.user.email}`);
+  console.log(`Intruder: ${intruder.register.user.email}`);
+  console.log('Data isolation: ok');
 }
 
 main().catch((error) => {
