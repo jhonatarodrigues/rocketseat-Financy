@@ -14,11 +14,13 @@ import logoMark from '../assets/figma/logo-mark.svg'
 import logoWord from '../assets/figma/logo-word.svg'
 
 type LoginPageProps = {
+  error?: string | null
+  isLoading?: boolean
   onLogin: (input: LoginInput) => Promise<void>
   onRegister: (input: RegisterInput) => Promise<void>
 }
 
-export function LoginPage({ onLogin, onRegister }: LoginPageProps) {
+export function LoginPage({ error, isLoading, onLogin, onRegister }: LoginPageProps) {
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const schema = mode === 'register' ? registerSchema : loginSchema
   const {
@@ -118,12 +120,18 @@ export function LoginPage({ onLogin, onRegister }: LoginPageProps) {
             </div>
           </div>
 
+          {error ? (
+            <p className="m-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium leading-5 text-red-700">
+              {error}
+            </p>
+          ) : null}
+
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isLoading}
             className="flex h-12 w-full items-center justify-center rounded-lg bg-[#1f6f43] px-4 py-3 text-base font-medium leading-6 text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSubmitting ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Cadastrar'}
+            {isSubmitting || isLoading ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Cadastrar'}
           </button>
 
           <div className="flex w-full items-center justify-center gap-3">
