@@ -1,14 +1,22 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm, useWatch } from 'react-hook-form'
 import {
+  BaggageClaim,
+  BookOpen,
   BriefcaseBusiness,
-  CalendarDays,
   CarFront,
   Check,
+  Dumbbell,
+  Gift,
   HeartPulse,
+  House,
+  Mailbox,
+  PawPrint,
   PiggyBank,
+  ReceiptText,
   ShoppingCart,
   Ticket,
+  ToolCase,
   Utensils,
 } from 'lucide-react'
 import { categorySchema, type CategoryFormValues } from '../../features/finance/schemas/categorySchema'
@@ -25,22 +33,30 @@ type CategoryDialogProps = {
 
 const initialForm: CategoryInput = {
   name: '',
-  color: '#3b82f6',
+  color: '#16a34a',
   description: '',
-  icon: 'utensils',
+  icon: 'briefcase',
 }
 
-const categoryColors = ['#3b82f6', '#db2777', '#16a34a', '#ea580c', '#ef4444', '#9333ea', '#a16207']
+const categoryColors = ['#16a34a', '#2563eb', '#9333ea', '#db2777', '#dc2626', '#ea580c', '#ca8a04']
 
 const categoryIcons = [
-  { icon: Utensils, label: 'Alimentação', value: 'utensils' },
-  { icon: Ticket, label: 'Entretenimento', value: 'ticket' },
+  { icon: BriefcaseBusiness, label: 'Salário', value: 'briefcase' },
+  { icon: CarFront, label: 'Transporte', value: 'car' },
+  { icon: HeartPulse, label: 'Saúde', value: 'heart-pulse' },
   { icon: PiggyBank, label: 'Investimento', value: 'piggy-bank' },
   { icon: ShoppingCart, label: 'Mercado', value: 'shopping-cart' },
-  { icon: BriefcaseBusiness, label: 'Salário', value: 'briefcase' },
-  { icon: HeartPulse, label: 'Saúde', value: 'heart-pulse' },
-  { icon: CarFront, label: 'Transporte', value: 'car' },
-  { icon: CalendarDays, label: 'Utilidades', value: 'calendar' },
+  { icon: Ticket, label: 'Entretenimento', value: 'ticket' },
+  { icon: ToolCase, label: 'Utilidades', value: 'tool-case' },
+  { icon: Utensils, label: 'Alimentação', value: 'utensils' },
+  { icon: PawPrint, label: 'Pets', value: 'paw-print' },
+  { icon: House, label: 'Moradia', value: 'house' },
+  { icon: Gift, label: 'Presentes', value: 'gift' },
+  { icon: Dumbbell, label: 'Academia', value: 'dumbbell' },
+  { icon: BookOpen, label: 'Educação', value: 'book-open' },
+  { icon: BaggageClaim, label: 'Viagens', value: 'baggage-claim' },
+  { icon: Mailbox, label: 'Correspondência', value: 'mailbox' },
+  { icon: ReceiptText, label: 'Contas', value: 'receipt-text' },
 ]
 
 export function CategoryDialog({ category, onClose, onSubmit }: CategoryDialogProps) {
@@ -57,7 +73,7 @@ export function CategoryDialog({ category, onClose, onSubmit }: CategoryDialogPr
         name: category.name,
         color: category.color,
         description: category.description ?? '',
-        icon: category.icon ?? 'utensils',
+        icon: category.icon ?? 'briefcase',
       }
       : initialForm,
   })
@@ -71,35 +87,36 @@ export function CategoryDialog({ category, onClose, onSubmit }: CategoryDialogPr
 
   return (
     <Dialog
+      description="Organize suas transações com categorias"
       title={category ? 'Editar categoria' : 'Nova categoria'}
       onClose={onClose}
+      panelClassName="max-w-[448px] rounded-[12px] p-[25px]"
+      headerClassName="mb-6"
+      titleClassName="text-base font-semibold leading-6"
+      footerClassName="mt-6"
       footer={
-        <>
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button type="submit" form="category-form" disabled={isSubmitting}>
-            Salvar categoria
-          </Button>
-        </>
+        <Button type="submit" form="category-form" size="lg" className="h-12 w-full" disabled={isSubmitting}>
+          Salvar
+        </Button>
       }
     >
       <form id="category-form" className="grid gap-4" onSubmit={handleSubmit(submitForm)}>
         <Field label="Nome" error={errors.name?.message}>
-          <Input hasError={Boolean(errors.name)} placeholder="Ex: Alimentação" {...register('name')} />
+          <Input hasError={Boolean(errors.name)} placeholder="Ex. Alimentação" {...register('name')} />
         </Field>
 
         <Field label="Descrição" error={errors.description?.message}>
           <textarea
-            className="min-h-20 w-full resize-none rounded-lg border border-[#d1d5db] bg-white px-[13px] py-[15px] text-base leading-6 text-[#111827] outline-none transition placeholder:text-[#9ca3af] focus:border-app-primary focus:ring-4 focus:ring-app-primary-soft"
-            placeholder="Ex: Restaurantes, delivery e refeições"
+            className="h-12 w-full resize-none rounded-lg border border-[#d1d5db] bg-white px-[13px] py-[15px] text-base leading-[18px] text-[#111827] outline-none transition placeholder:text-[#9ca3af] focus:border-app-primary focus:ring-4 focus:ring-app-primary-soft"
+            placeholder="Descrição da categoria"
             {...register('description')}
           />
+          <span className="-mt-1 text-xs leading-4 text-[#6b7280]">Opcional</span>
         </Field>
 
         <Field label="Ícone" error={errors.icon?.message}>
           <input type="hidden" {...register('icon')} />
-          <div className="grid grid-cols-4 gap-2">
+          <div className="flex flex-wrap gap-2">
             {categoryIcons.map((option) => {
               const Icon = option.icon
               const isActive = selectedIcon === option.value
@@ -110,14 +127,14 @@ export function CategoryDialog({ category, onClose, onSubmit }: CategoryDialogPr
                   type="button"
                   className={
                     isActive
-                      ? 'grid h-12 place-items-center rounded-lg border border-[#1f6f43] bg-[#dcfce7] text-[#15803d]'
-                      : 'grid h-12 place-items-center rounded-lg border border-[#d1d5db] bg-white text-[#4b5563]'
+                      ? 'grid h-[42px] w-[42px] place-items-center rounded-lg border border-[#1f6f43] bg-[#f8f9fa] text-[#4b5563]'
+                      : 'grid h-[42px] w-[42px] place-items-center rounded-lg border border-[#d1d5db] bg-white text-[#4b5563]'
                   }
                   onClick={() => setValue('icon', option.value, { shouldDirty: true, shouldValidate: true })}
                   aria-label={`Selecionar ícone ${option.label}`}
                   title={option.label}
                 >
-                  <Icon size={18} />
+                  <Icon size={20} strokeWidth={2} />
                 </button>
               )
             })}
@@ -126,17 +143,22 @@ export function CategoryDialog({ category, onClose, onSubmit }: CategoryDialogPr
 
         <Field label="Cor" error={errors.color?.message}>
           <input type="hidden" {...register('color')} />
-          <div className="grid h-12 grid-cols-7 overflow-hidden rounded-lg border border-[#d1d5db] bg-white">
+          <div className="flex gap-2">
             {categoryColors.map((color) => (
               <button
                 key={color}
                 type="button"
-                className="grid h-full place-items-center"
-                style={{ backgroundColor: color }}
+                className={
+                  selectedColor === color
+                    ? 'flex h-[30px] flex-1 items-center justify-center rounded-lg border border-[#1f6f43] bg-[#f8f9fa] p-[5px]'
+                    : 'flex h-[30px] flex-1 items-center justify-center rounded-lg border border-[#d1d5db] bg-white p-[5px]'
+                }
                 onClick={() => setValue('color', color, { shouldDirty: true, shouldValidate: true })}
                 aria-label={`Selecionar cor ${color}`}
               >
-                {selectedColor === color ? <Check className="text-white drop-shadow-sm" size={16} /> : null}
+                <span className="grid h-5 w-full place-items-center rounded" style={{ backgroundColor: color }}>
+                  {selectedColor === color ? <Check className="text-white drop-shadow-sm" size={14} /> : null}
+                </span>
               </button>
             ))}
           </div>

@@ -10,7 +10,7 @@ export const mockCategories: Category[] = [
   {
     id: 'cat-food',
     name: 'Alimentação',
-    color: '#3b82f6',
+    color: '#2563eb',
     amount: 542.3,
     description: 'Restaurantes, delivery e refeições',
     icon: 'utensils',
@@ -59,7 +59,7 @@ export const mockCategories: Category[] = [
   {
     id: 'cat-health',
     name: 'Saúde',
-    color: '#ef4444',
+    color: '#dc2626',
     description: 'Medicamentos, consultas e exames',
     icon: 'heart-pulse',
     itemsCount: 0,
@@ -78,10 +78,10 @@ export const mockCategories: Category[] = [
   {
     id: 'cat-utilities',
     name: 'Utilidades',
-    color: '#a16207',
+    color: '#ca8a04',
     amount: 245.8,
     description: 'Energia, água, internet e telefone',
-    icon: 'calendar',
+    icon: 'tool-case',
     itemsCount: 7,
     tagClassName: 'bg-[#fef9c3] text-[#a16207]',
   },

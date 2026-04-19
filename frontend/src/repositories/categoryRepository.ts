@@ -36,7 +36,6 @@ export const categoryRepository = {
 
 function getCategoryTone(color: string) {
   const tones: Record<string, string> = {
-    '#3b82f6': 'bg-[#dbeafe] text-[#2563eb]',
     '#2563eb': 'bg-[#dbeafe] text-[#2563eb]',
     '#db2777': 'bg-[#fce7f3] text-[#db2777]',
     '#16a34a': 'bg-[#dcfce7] text-[#15803d]',
@@ -46,6 +45,7 @@ function getCategoryTone(color: string) {
     '#1f6f43': 'bg-[#dcfce7] text-[#15803d]',
     '#ef4444': 'bg-[#fee2e2] text-[#dc2626]',
     '#dc2626': 'bg-[#fee2e2] text-[#dc2626]',
+    '#ca8a04': 'bg-[#fef9c3] text-[#a16207]',
     '#a16207': 'bg-[#fef9c3] text-[#a16207]',
   }
 
