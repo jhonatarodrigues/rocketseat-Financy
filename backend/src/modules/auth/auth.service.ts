@@ -1,9 +1,9 @@
 import { compare, hash } from 'bcryptjs';
-import { GraphQLError } from 'graphql';
 import jwt from 'jsonwebtoken';
 
 import { env } from '../../config/env.js';
 import type { GraphQLContext } from '../../graphql/context.js';
+import { badRequest, parseInput, unauthorized } from '../shared/errors.js';
 import { mapUser } from './auth.mapper.js';
 import { loginInputSchema, registerInputSchema } from './auth.schemas.js';
 
@@ -18,30 +18,6 @@ function createToken(userId: string) {
   return jwt.sign({ sub: userId }, env.JWT_SECRET, {
     expiresIn: '7d',
   });
-}
-
-function unauthorized() {
-  return new GraphQLError('Unauthorized', {
-    extensions: {
-      code: 'UNAUTHORIZED',
-    },
-  });
-}
-
-function badRequest(message: string) {
-  return new GraphQLError(message, {
-    extensions: {
-      code: 'BAD_USER_INPUT',
-    },
-  });
-}
-
-function parseInput<T>(result: { success: true; data: T } | { success: false; error: { issues: { message: string }[] } }) {
-  if (result.success) {
-    return result.data;
-  }
-
-  throw badRequest(result.error.issues[0]?.message ?? 'Invalid input');
 }
 
 export async function register(
