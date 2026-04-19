@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { InputHTMLAttributes, PropsWithChildren, ReactNode } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { EyeOff, LockKeyhole, Mail, UserRoundPlus } from 'lucide-react'
+import { Eye, EyeOff, LockKeyhole, Mail, UserRoundPlus } from 'lucide-react'
 import {
   loginSchema,
   registerSchema,
@@ -13,6 +13,8 @@ import type { LoginInput, RegisterInput } from '../types/finance'
 import logoMark from '../assets/figma/logo-mark.svg'
 import logoWord from '../assets/figma/logo-word.svg'
 
+const REMEMBER_EMAIL_STORAGE_KEY = '@financy:remember-email'
+
 type LoginPageProps = {
   error?: string | null
   isLoading?: boolean
@@ -22,6 +24,11 @@ type LoginPageProps = {
 
 export function LoginPage({ error, isLoading, onLogin, onRegister }: LoginPageProps) {
   const [mode, setMode] = useState<'login' | 'register'>('login')
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false)
+  const [recoverMessage, setRecoverMessage] = useState<string | null>(null)
+  const [rememberLogin, setRememberLogin] = useState(() =>
+    Boolean(window.localStorage.getItem(REMEMBER_EMAIL_STORAGE_KEY)),
+  )
   const schema = mode === 'register' ? registerSchema : loginSchema
   const {
     formState: { errors, isSubmitting },
@@ -31,7 +38,7 @@ export function LoginPage({ error, isLoading, onLogin, onRegister }: LoginPagePr
   } = useForm<LoginFormValues | RegisterFormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      email: '',
+      email: window.localStorage.getItem(REMEMBER_EMAIL_STORAGE_KEY) ?? '',
       password: '',
       name: '',
     },
@@ -44,11 +51,27 @@ export function LoginPage({ error, isLoading, onLogin, onRegister }: LoginPagePr
     }
 
     await onLogin(values as LoginInput)
+
+    if (rememberLogin) {
+      window.localStorage.setItem(REMEMBER_EMAIL_STORAGE_KEY, values.email)
+      return
+    }
+
+    window.localStorage.removeItem(REMEMBER_EMAIL_STORAGE_KEY)
   }
 
   function toggleMode() {
     setMode((currentMode) => (currentMode === 'login' ? 'register' : 'login'))
-    reset({ email: '', password: '', name: '' })
+    setRecoverMessage(null)
+    reset({
+      email: window.localStorage.getItem(REMEMBER_EMAIL_STORAGE_KEY) ?? '',
+      password: '',
+      name: '',
+    })
+  }
+
+  function recoverPassword() {
+    setRecoverMessage('Recuperação de senha ainda não está disponível nesta versão.')
   }
 
   return (
@@ -96,29 +119,53 @@ export function LoginPage({ error, isLoading, onLogin, onRegister }: LoginPagePr
               <FigmaTextInput
                 hasError={Boolean(errors.password)}
                 icon={<LockKeyhole size={16} strokeWidth={1.5} />}
-                rightIcon={<EyeOff size={16} strokeWidth={1.5} />}
-                type="password"
+                rightIcon={
+                  <button
+                    type="button"
+                    aria-label={isPasswordVisible ? 'Ocultar senha' : 'Mostrar senha'}
+                    className="grid h-6 w-6 place-items-center rounded text-[#111827]"
+                    onClick={() => setIsPasswordVisible((current) => !current)}
+                  >
+                    {isPasswordVisible ? (
+                      <EyeOff size={16} strokeWidth={1.5} />
+                    ) : (
+                      <Eye size={16} strokeWidth={1.5} />
+                    )}
+                  </button>
+                }
+                type={isPasswordVisible ? 'text' : 'password'}
                 placeholder="Digite sua senha"
                 {...register('password')}
               />
             </FigmaField>
 
-            <div className="flex h-5 w-full items-center justify-between">
-              <label className="flex items-center gap-2 text-sm font-normal leading-5 text-[#374151]">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 appearance-none rounded border border-[#d1d5db] bg-white"
-                />
-                Lembrar-me
-              </label>
-              <button
-                type="button"
-                className="text-sm font-medium leading-5 text-[#1f6f43]"
-              >
-                Recuperar senha
-              </button>
-            </div>
+            {mode === 'login' ? (
+              <div className="flex h-5 w-full items-center justify-between">
+                <label className="flex items-center gap-2 text-sm font-normal leading-5 text-[#374151]">
+                  <input
+                    type="checkbox"
+                    checked={rememberLogin}
+                    onChange={(event) => setRememberLogin(event.target.checked)}
+                    className="h-4 w-4 rounded border border-[#d1d5db] bg-white accent-[#1f6f43]"
+                  />
+                  Lembrar-me
+                </label>
+                <button
+                  type="button"
+                  className="text-sm font-medium leading-5 text-[#1f6f43]"
+                  onClick={recoverPassword}
+                >
+                  Recuperar senha
+                </button>
+              </div>
+            ) : null}
           </div>
+
+          {recoverMessage ? (
+            <p className="m-0 rounded-lg border border-[#dbeafe] bg-[#eff6ff] px-3 py-2 text-sm font-medium leading-5 text-[#1d4ed8]">
+              {recoverMessage}
+            </p>
+          ) : null}
 
           {error ? (
             <p className="m-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium leading-5 text-red-700">
@@ -197,7 +244,7 @@ function FigmaTextInput({ hasError, icon, rightIcon, className, ...props }: Figm
         {...props}
       />
       {rightIcon ? (
-        <span className="grid h-4 w-4 shrink-0 place-items-center text-[#111827]">{rightIcon}</span>
+        <span className="grid h-6 w-6 shrink-0 place-items-center text-[#111827]">{rightIcon}</span>
       ) : null}
     </div>
   )

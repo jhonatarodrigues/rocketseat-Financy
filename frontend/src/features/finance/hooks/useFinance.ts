@@ -139,14 +139,45 @@ export function useFinance(userId: string) {
     categories,
     transactions,
     summary,
+    error: getFinanceError([
+      categoriesQuery.error,
+      transactionsQuery.error,
+      createTransactionMutation.error,
+      updateTransactionMutation.error,
+      deleteTransactionMutation.error,
+      createCategoryMutation.error,
+      updateCategoryMutation.error,
+      deleteCategoryMutation.error,
+    ]),
     isLoading: categoriesQuery.isLoading || transactionsQuery.isLoading,
-    createTransaction: createTransactionMutation.mutate,
+    isMutating:
+      createTransactionMutation.isPending ||
+      updateTransactionMutation.isPending ||
+      deleteTransactionMutation.isPending ||
+      createCategoryMutation.isPending ||
+      updateCategoryMutation.isPending ||
+      deleteCategoryMutation.isPending,
+    createTransaction: createTransactionMutation.mutateAsync,
     updateTransaction: (transactionId: string, input: TransactionInput) =>
-      updateTransactionMutation.mutate({ transactionId, input }),
-    deleteTransaction: deleteTransactionMutation.mutate,
-    createCategory: createCategoryMutation.mutate,
+      updateTransactionMutation.mutateAsync({ transactionId, input }),
+    deleteTransaction: deleteTransactionMutation.mutateAsync,
+    createCategory: createCategoryMutation.mutateAsync,
     updateCategory: (categoryId: string, input: CategoryInput) =>
-      updateCategoryMutation.mutate({ categoryId, input }),
-    deleteCategory: deleteCategoryMutation.mutate,
+      updateCategoryMutation.mutateAsync({ categoryId, input }),
+    deleteCategory: deleteCategoryMutation.mutateAsync,
   }
+}
+
+function getFinanceError(errors: Array<Error | null>) {
+  const error = errors.find(Boolean)
+
+  if (!error) {
+    return null
+  }
+
+  if (error.message === 'Category has transactions and cannot be deleted') {
+    return 'Exclua as transações vinculadas antes de apagar esta categoria.'
+  }
+
+  return error.message
 }

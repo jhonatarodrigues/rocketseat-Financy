@@ -89,6 +89,7 @@ export function FinanceApp({ onLogout, user }: FinanceAppProps) {
         <DashboardScreen
           categories={finance.categories}
           categoriesById={categoriesById}
+          isLoading={finance.isLoading}
           onCreateTransaction={() => setTransactionDialog(null)}
           onNavigate={setPage}
           summary={finance.summary}
@@ -98,7 +99,9 @@ export function FinanceApp({ onLogout, user }: FinanceAppProps) {
 
       {page === 'transactions' ? (
         <TransactionsScreen
+          categories={finance.categories}
           categoriesById={categoriesById}
+          isLoading={finance.isLoading}
           onCreateTransaction={() => setTransactionDialog(null)}
           onDeleteTransaction={finance.deleteTransaction}
           onEditTransaction={setTransactionDialog}
@@ -109,6 +112,7 @@ export function FinanceApp({ onLogout, user }: FinanceAppProps) {
       {page === 'categories' ? (
         <CategoriesScreen
           categories={finance.categories}
+          isLoading={finance.isLoading}
           onCreateCategory={() => setCategoryDialog(null)}
           onDeleteCategory={finance.deleteCategory}
           onEditCategory={setCategoryDialog}
@@ -118,19 +122,23 @@ export function FinanceApp({ onLogout, user }: FinanceAppProps) {
 
       {page === 'profile' ? <ProfileScreen initials={initials} onLogout={onLogout} user={user} /> : null}
 
+      {finance.isMutating ? <ApiLoadingOverlay /> : null}
+
+      {finance.error ? <ApiErrorToast message={finance.error} /> : null}
+
       {transactionDialog !== undefined ? (
         <TransactionDialog
           key={transactionDialog?.id || 'new-transaction'}
           categories={finance.categories}
           transaction={transactionDialog}
           onClose={() => setTransactionDialog(undefined)}
-          onSubmit={(input) => {
+          onSubmit={async (input) => {
             if (transactionDialog) {
-              finance.updateTransaction(transactionDialog.id, input)
+              await finance.updateTransaction(transactionDialog.id, input)
               return
             }
 
-            finance.createTransaction(input)
+            await finance.createTransaction(input)
           }}
         />
       ) : null}
@@ -140,13 +148,13 @@ export function FinanceApp({ onLogout, user }: FinanceAppProps) {
           key={categoryDialog?.id || 'new-category'}
           category={categoryDialog}
           onClose={() => setCategoryDialog(undefined)}
-          onSubmit={(input) => {
+          onSubmit={async (input) => {
             if (categoryDialog) {
-              finance.updateCategory(categoryDialog.id, input)
+              await finance.updateCategory(categoryDialog.id, input)
               return
             }
 
-            finance.createCategory(input)
+            await finance.createCategory(input)
           }}
         />
       ) : null}
@@ -227,6 +235,7 @@ function NavButton({
 type DashboardScreenProps = {
   categories: Category[]
   categoriesById: Map<string, Category>
+  isLoading: boolean
   onCreateTransaction: () => void
   onNavigate: (page: Page) => void
   summary: {
@@ -240,6 +249,7 @@ type DashboardScreenProps = {
 function DashboardScreen({
   categories,
   categoriesById,
+  isLoading,
   onCreateTransaction,
   onNavigate,
   summary,
@@ -273,7 +283,11 @@ function DashboardScreen({
             onAction={() => onNavigate('transactions')}
           />
           <div>
-            {recentTransactions.map((transaction) => (
+            {isLoading ? <PanelLoading label="Carregando transações..." /> : null}
+            {!isLoading && recentTransactions.length === 0 ? (
+              <PanelEmpty label="Nenhuma transação cadastrada." />
+            ) : null}
+            {!isLoading && recentTransactions.map((transaction) => (
               <DashboardTransactionRow
                 category={categoriesById.get(transaction.categoryId)}
                 key={transaction.id}
@@ -294,7 +308,11 @@ function DashboardScreen({
         <section className="h-fit overflow-hidden rounded-lg border border-[#e5e7eb] bg-white">
           <SectionHeader action="Gerenciar" title="Categorias" onAction={() => onNavigate('categories')} />
           <div className="grid gap-5 p-6">
-            {categories
+            {isLoading ? <PanelLoading label="Carregando categorias..." /> : null}
+            {!isLoading && categories.length === 0 ? (
+              <PanelEmpty label="Nenhuma categoria cadastrada." />
+            ) : null}
+            {!isLoading && categories
               .filter((category) => category.amount)
               .slice(0, 5)
               .map((category) => (
@@ -316,7 +334,9 @@ function DashboardScreen({
 }
 
 type TransactionsScreenProps = {
+  categories: Category[]
   categoriesById: Map<string, Category>
+  isLoading: boolean
   onCreateTransaction: () => void
   onDeleteTransaction: (id: string) => void
   onEditTransaction: (transaction: Transaction) => void
@@ -324,12 +344,30 @@ type TransactionsScreenProps = {
 }
 
 function TransactionsScreen({
+  categories,
   categoriesById,
+  isLoading,
   onCreateTransaction,
   onDeleteTransaction,
   onEditTransaction,
   transactions,
 }: TransactionsScreenProps) {
+  const [search, setSearch] = useState('')
+  const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all')
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [periodFilter, setPeriodFilter] = useState('')
+
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((transaction) => {
+      const matchesSearch = transaction.title.toLowerCase().includes(search.toLowerCase())
+      const matchesType = typeFilter === 'all' || transaction.type === typeFilter
+      const matchesCategory = categoryFilter === 'all' || transaction.categoryId === categoryFilter
+      const matchesPeriod = !periodFilter || transaction.date.slice(0, 7) === periodFilter
+
+      return matchesSearch && matchesType && matchesCategory && matchesPeriod
+    })
+  }, [categoryFilter, periodFilter, search, transactions, typeFilter])
+
   return (
     <section className="mx-auto w-full max-w-[1280px] px-6 py-12 sm:px-12">
       <PageTitle
@@ -340,10 +378,27 @@ function TransactionsScreen({
       />
 
       <section className="mt-8 grid gap-4 rounded-lg border border-[#e5e7eb] bg-white p-6 lg:grid-cols-4">
-        <FilterInput icon={<Search size={16} />} label="Buscar" placeholder="Buscar por descrição" />
-        <FilterSelect label="Tipo" value="Todos" />
-        <FilterSelect label="Categoria" value="Todas" />
-        <FilterSelect label="Período" value="novembro / 2025" />
+        <FilterInput
+          icon={<Search size={16} />}
+          label="Buscar"
+          placeholder="Buscar por descrição"
+          value={search}
+          onChange={setSearch}
+        />
+        <FilterSelect label="Tipo" value={typeFilter} onChange={(value) => setTypeFilter(value as typeof typeFilter)}>
+          <option value="all">Todos</option>
+          <option value="income">Receitas</option>
+          <option value="expense">Despesas</option>
+        </FilterSelect>
+        <FilterSelect label="Categoria" value={categoryFilter} onChange={setCategoryFilter}>
+          <option value="all">Todas</option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.name}
+            </option>
+          ))}
+        </FilterSelect>
+        <FilterMonth label="Período" value={periodFilter} onChange={setPeriodFilter} />
       </section>
 
       <section className="mt-9 overflow-hidden rounded-lg border border-[#e5e7eb] bg-white">
@@ -357,7 +412,11 @@ function TransactionsScreen({
         </div>
 
         <div>
-          {transactions.slice(1).map((transaction) => (
+          {isLoading ? <PanelLoading label="Carregando transações..." /> : null}
+          {!isLoading && filteredTransactions.length === 0 ? (
+            <PanelEmpty label="Nenhuma transação encontrada." />
+          ) : null}
+          {!isLoading && filteredTransactions.map((transaction) => (
             <TransactionTableRow
               category={categoriesById.get(transaction.categoryId)}
               key={transaction.id}
@@ -369,7 +428,9 @@ function TransactionsScreen({
         </div>
 
         <footer className="flex min-h-[72px] items-center justify-between border-t border-[#e5e7eb] px-6 max-sm:flex-col max-sm:items-start max-sm:gap-4 max-sm:py-4">
-          <span className="text-sm leading-5 text-[#374151]">1 a 10 | 27 resultados</span>
+          <span className="text-sm leading-5 text-[#374151]">
+            {filteredTransactions.length === 0 ? '0 resultados' : `1 a ${filteredTransactions.length} | ${filteredTransactions.length} resultados`}
+          </span>
           <div className="flex gap-2">
             <PaginationButton disabled>
               <ArrowLeft size={16} />
@@ -389,6 +450,7 @@ function TransactionsScreen({
 
 type CategoriesScreenProps = {
   categories: Category[]
+  isLoading: boolean
   onCreateCategory: () => void
   onDeleteCategory: (id: string) => void
   onEditCategory: (category: Category) => void
@@ -397,6 +459,7 @@ type CategoriesScreenProps = {
 
 function CategoriesScreen({
   categories,
+  isLoading,
   onCreateCategory,
   onDeleteCategory,
   onEditCategory,
@@ -432,7 +495,11 @@ function CategoriesScreen({
       </section>
 
       <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {categories.map((category) => (
+        {isLoading ? <PanelLoading className="sm:col-span-2 lg:col-span-4" label="Carregando categorias..." /> : null}
+        {!isLoading && categories.length === 0 ? (
+          <PanelEmpty className="sm:col-span-2 lg:col-span-4" label="Nenhuma categoria cadastrada." />
+        ) : null}
+        {!isLoading && categories.map((category) => (
           <CategoryCard
             category={category}
             key={category.id}
@@ -719,35 +786,110 @@ function PageTitle({
 function FilterInput({
   icon,
   label,
+  onChange,
   placeholder,
+  value,
 }: {
   icon: ReactNode
   label: string
+  onChange: (value: string) => void
   placeholder: string
+  value: string
 }) {
   return (
     <label className="grid gap-2">
       <span className="text-sm font-medium leading-5 text-[#374151]">{label}</span>
       <div className="flex h-12 items-center gap-3 rounded-lg border border-[#d1d5db] bg-white px-[13px] py-[15px] text-[#9ca3af]">
         {icon}
-        <input className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-[#9ca3af]" placeholder={placeholder} />
+        <input
+          className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-[#9ca3af]"
+          placeholder={placeholder}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
       </div>
     </label>
   )
 }
 
-function FilterSelect({ label, value }: { label: string; value: string }) {
+function FilterSelect({
+  children,
+  label,
+  onChange,
+  value,
+}: PropsWithChildren<{
+  label: string
+  onChange: (value: string) => void
+  value: string
+}>) {
   return (
     <label className="grid gap-2">
       <span className="text-sm font-medium leading-5 text-[#374151]">{label}</span>
-      <button
-        className="flex h-12 items-center justify-between rounded-lg border border-[#d1d5db] bg-white px-[13px] py-[15px] text-left text-base leading-[18px] text-[#111827]"
-        type="button"
-      >
-        {value}
-        <ChevronDown className="text-[#4b5563]" size={16} />
-      </button>
+      <span className="relative">
+        <select
+          className="h-12 w-full appearance-none rounded-lg border border-[#d1d5db] bg-white px-[13px] py-[15px] pr-10 text-base leading-[18px] text-[#111827] outline-none transition focus:border-app-primary focus:ring-4 focus:ring-app-primary-soft"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        >
+          {children}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-[13px] top-1/2 -translate-y-1/2 text-[#4b5563]" size={16} />
+      </span>
     </label>
+  )
+}
+
+function FilterMonth({
+  label,
+  onChange,
+  value,
+}: {
+  label: string
+  onChange: (value: string) => void
+  value: string
+}) {
+  return (
+    <label className="grid gap-2">
+      <span className="text-sm font-medium leading-5 text-[#374151]">{label}</span>
+      <input
+        className="h-12 rounded-lg border border-[#d1d5db] bg-white px-[13px] py-[15px] text-base leading-[18px] text-[#111827] outline-none transition focus:border-app-primary focus:ring-4 focus:ring-app-primary-soft"
+        type="month"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
+  )
+}
+
+function PanelLoading({ className = '', label }: { className?: string; label: string }) {
+  return (
+    <div className={`grid min-h-[72px] place-items-center px-6 py-6 text-sm font-medium text-[#4b5563] ${className}`}>
+      {label}
+    </div>
+  )
+}
+
+function PanelEmpty({ className = '', label }: { className?: string; label: string }) {
+  return (
+    <div className={`grid min-h-[72px] place-items-center px-6 py-6 text-sm text-[#6b7280] ${className}`}>
+      {label}
+    </div>
+  )
+}
+
+function ApiLoadingOverlay() {
+  return (
+    <div className="fixed bottom-6 right-6 z-50 rounded-lg border border-[#d1d5db] bg-white px-4 py-3 text-sm font-medium text-[#374151] shadow-lg">
+      Salvando...
+    </div>
+  )
+}
+
+function ApiErrorToast({ message }: { message: string }) {
+  return (
+    <div className="fixed bottom-6 left-6 z-50 max-w-sm rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 shadow-lg">
+      {message}
+    </div>
   )
 }
 

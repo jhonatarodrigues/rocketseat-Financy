@@ -139,7 +139,7 @@ mutation Register {
     input: {
       name: "Demo Financy"
       email: "demo@financy.dev"
-      password: "123456"
+      password: "12345678"
     }
   ) {
     token

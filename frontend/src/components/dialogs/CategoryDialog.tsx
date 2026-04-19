@@ -28,7 +28,7 @@ import type { Category, CategoryInput } from '../../types/finance'
 type CategoryDialogProps = {
   category?: Category | null
   onClose: () => void
-  onSubmit: (input: CategoryInput) => void
+  onSubmit: (input: CategoryInput) => Promise<void> | void
 }
 
 const initialForm: CategoryInput = {
@@ -80,8 +80,8 @@ export function CategoryDialog({ category, onClose, onSubmit }: CategoryDialogPr
   const selectedColor = useWatch({ control, name: 'color' })
   const selectedIcon = useWatch({ control, name: 'icon' })
 
-  function submitForm(values: CategoryInput) {
-    onSubmit(values)
+  async function submitForm(values: CategoryInput) {
+    await onSubmit(values)
     onClose()
   }
 

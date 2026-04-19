@@ -14,7 +14,7 @@ type TransactionDialogProps = {
   categories: Category[]
   transaction?: Transaction | null
   onClose: () => void
-  onSubmit: (input: TransactionInput) => void
+  onSubmit: (input: TransactionInput) => Promise<void> | void
 }
 
 const initialForm: TransactionInput = {
@@ -43,7 +43,7 @@ export function TransactionDialog({
         title: transaction.title,
         amount: transaction.amount,
         type: transaction.type,
-        date: transaction.date,
+        date: toDateInputValue(transaction.date),
         categoryId: transaction.categoryId,
       }
       : {
@@ -51,8 +51,8 @@ export function TransactionDialog({
       },
   })
 
-  function submitForm(values: TransactionInput) {
-    onSubmit(values)
+  async function submitForm(values: TransactionInput) {
+    await onSubmit(values)
     onClose()
   }
 
@@ -114,6 +114,7 @@ export function TransactionDialog({
             <Input
               hasError={Boolean(errors.date)}
               placeholder="Selecione"
+              type="date"
               {...register('date')}
             />
           </Field>
@@ -157,6 +158,24 @@ export function TransactionDialog({
       </form>
     </Dialog>
   )
+}
+
+function toDateInputValue(date: string) {
+  if (!date) {
+    return ''
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return date
+  }
+
+  const parsedDate = new Date(date)
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return ''
+  }
+
+  return parsedDate.toISOString().slice(0, 10)
 }
 
 function formatCurrencyMask(value: number) {

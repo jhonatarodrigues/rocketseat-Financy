@@ -4,7 +4,7 @@ type GraphQLResponse<T> = {
 };
 
 const endpoint = process.env.BACKEND_URL ?? 'http://localhost:3333/graphql';
-const testPassword = '123456';
+const testPassword = '12345678';
 
 async function request<T>(
   query: string,

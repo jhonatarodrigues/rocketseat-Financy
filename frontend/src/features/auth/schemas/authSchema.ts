@@ -2,11 +2,13 @@ import { z } from 'zod'
 
 export const loginSchema = z.object({
   email: z.string().email('Informe um email valido.'),
-  password: z.string().min(6, 'Informe pelo menos 6 caracteres.'),
+  password: z.string().min(1, 'Informe sua senha.'),
 })
 
-export const registerSchema = loginSchema.extend({
+export const registerSchema = z.object({
+  email: z.string().email('Informe um email valido.'),
   name: z.string().min(2, 'Informe pelo menos 2 caracteres.'),
+  password: z.string().min(8, 'A senha deve ter no mínimo 8 caracteres'),
 })
 
 export type LoginFormValues = z.infer<typeof loginSchema>
