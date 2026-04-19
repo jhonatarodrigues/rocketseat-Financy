@@ -70,7 +70,7 @@ const iconMap = {
 }
 
 export function FinanceApp({ onLogout, user }: FinanceAppProps) {
-  const finance = useFinance()
+  const finance = useFinance(user.id)
   const [page, setPage] = useState<Page>('dashboard')
   const [transactionDialog, setTransactionDialog] = useState<Transaction | null | undefined>()
   const [categoryDialog, setCategoryDialog] = useState<Category | null | undefined>()
@@ -91,6 +91,7 @@ export function FinanceApp({ onLogout, user }: FinanceAppProps) {
           categoriesById={categoriesById}
           onCreateTransaction={() => setTransactionDialog(null)}
           onNavigate={setPage}
+          summary={finance.summary}
           transactions={finance.transactions}
         />
       ) : null}
@@ -228,6 +229,11 @@ type DashboardScreenProps = {
   categoriesById: Map<string, Category>
   onCreateTransaction: () => void
   onNavigate: (page: Page) => void
+  summary: {
+    balance: number
+    expense: number
+    income: number
+  }
   transactions: Transaction[]
 }
 
@@ -236,28 +242,26 @@ function DashboardScreen({
   categoriesById,
   onCreateTransaction,
   onNavigate,
+  summary,
   transactions,
 }: DashboardScreenProps) {
   const recentTransactions = transactions.slice(0, 5)
-  const totalBalance = 12847.32
-  const monthlyIncome = 4250
-  const monthlyExpense = 2180.45
 
   return (
     <section className="mx-auto grid w-full max-w-[1280px] gap-6 px-6 py-12 sm:px-12">
       <div className="grid gap-6 lg:grid-cols-3">
-        <MetricCard icon={<Wallet size={20} />} label="Saldo total" value={formatCurrency(totalBalance)} />
+        <MetricCard icon={<Wallet size={20} />} label="Saldo total" value={formatCurrency(summary.balance)} />
         <MetricCard
           icon={<CircleArrowUp size={20} />}
           iconClassName="text-[#1f6f43]"
           label="Receitas do mês"
-          value={formatCurrency(monthlyIncome)}
+          value={formatCurrency(summary.income)}
         />
         <MetricCard
           icon={<CircleArrowDown size={20} />}
           iconClassName="text-[#ef4444]"
           label="Despesas do mês"
-          value={formatCurrency(monthlyExpense)}
+          value={formatCurrency(summary.expense)}
         />
       </div>
 
@@ -398,7 +402,9 @@ function CategoriesScreen({
   onEditCategory,
   transactionsCount,
 }: CategoriesScreenProps) {
-  const mostUsed = categories[0]
+  const mostUsed = [...categories].sort((firstCategory, secondCategory) =>
+    (secondCategory.itemsCount ?? 0) - (firstCategory.itemsCount ?? 0),
+  )[0]
 
   return (
     <section className="mx-auto w-full max-w-[1280px] px-6 py-12 sm:px-12">
@@ -415,7 +421,7 @@ function CategoriesScreen({
           icon={<ArrowUpDown size={24} />}
           iconClassName="text-[#9333ea]"
           label="total de transações"
-          value={String(transactionsCount + 18)}
+          value={String(transactionsCount)}
         />
         <CategoryMetric
           icon={<Utensils size={24} />}

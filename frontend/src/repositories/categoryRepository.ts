@@ -1,37 +1,138 @@
-import { mockCategories } from '../mocks/financeMock'
+import { graphqlRequest } from '../graphql/client'
 import type { Category, CategoryInput } from '../types/finance'
-
-const delay = <T,>(value: T) =>
-  new Promise<T>((resolve) => {
-    window.setTimeout(() => resolve(value), 250)
-  })
 
 export const categoryRepository = {
   async list() {
-    return delay<Category[]>(mockCategories)
+    const data = await graphqlRequest<{ categories: ApiCategory[] }>(
+      /* GraphQL */ `
+        query Categories {
+          categories {
+            id
+            name
+            title
+            description
+            icon
+            color
+          }
+        }
+      `,
+    )
+
+    return data.categories.map(mapCategory)
   },
 
   async create(input: CategoryInput) {
-    return delay<Category>({
-      ...input,
-      id: `cat-${crypto.randomUUID()}`,
-      itemsCount: 0,
-      tagClassName: getCategoryTone(input.color),
-    })
+    const data = await graphqlRequest<
+      { createCategory: ApiCategory },
+      { input: CreateCategoryMutationInput }
+    >(
+      /* GraphQL */ `
+        mutation CreateCategory($input: CreateCategoryInput!) {
+          createCategory(input: $input) {
+            id
+            name
+            title
+            description
+            icon
+            color
+          }
+        }
+      `,
+      {
+        input: mapCategoryInput(input),
+      },
+    )
+
+    return mapCategory(data.createCategory)
   },
 
   async update(categoryId: string, input: CategoryInput) {
-    return delay<Category>({
-      ...input,
-      id: categoryId,
-      tagClassName: getCategoryTone(input.color),
-    })
+    const data = await graphqlRequest<
+      { updateCategory: ApiCategory },
+      { input: UpdateCategoryMutationInput }
+    >(
+      /* GraphQL */ `
+        mutation UpdateCategory($input: UpdateCategoryInput!) {
+          updateCategory(input: $input) {
+            id
+            name
+            title
+            description
+            icon
+            color
+          }
+        }
+      `,
+      {
+        input: {
+          id: categoryId,
+          ...mapCategoryInput(input),
+        },
+      },
+    )
+
+    return mapCategory(data.updateCategory)
   },
 
   async delete(categoryId: string) {
-    void categoryId
-    return delay(true)
+    const data = await graphqlRequest<
+      { deleteCategory: boolean },
+      { input: { id: string } }
+    >(
+      /* GraphQL */ `
+        mutation DeleteCategory($input: DeleteCategoryInput!) {
+          deleteCategory(input: $input)
+        }
+      `,
+      {
+        input: {
+          id: categoryId,
+        },
+      },
+    )
+
+    return data.deleteCategory
   },
+}
+
+type ApiCategory = {
+  id: string
+  name: string
+  title: string
+  description?: string | null
+  icon: string
+  color: string
+}
+
+type CreateCategoryMutationInput = {
+  title: string
+  description: string | null
+  icon: string
+  color: string
+}
+
+type UpdateCategoryMutationInput = CreateCategoryMutationInput & {
+  id: string
+}
+
+function mapCategory(category: ApiCategory): Category {
+  return {
+    id: category.id,
+    name: category.name || category.title,
+    color: category.color,
+    description: category.description ?? '',
+    icon: category.icon,
+    tagClassName: getCategoryTone(category.color),
+  }
+}
+
+function mapCategoryInput(input: CategoryInput): CreateCategoryMutationInput {
+  return {
+    title: input.name,
+    description: input.description || null,
+    icon: input.icon,
+    color: input.color,
+  }
 }
 
 function getCategoryTone(color: string) {

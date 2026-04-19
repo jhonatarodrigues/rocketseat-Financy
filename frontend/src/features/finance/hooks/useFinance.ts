@@ -10,28 +10,48 @@ import type {
 } from '../../../types/finance'
 
 const financeQueryKeys = {
-  categories: ['categories'] as const,
-  transactions: ['transactions'] as const,
+  categories: (userId: string) => ['categories', userId] as const,
+  transactions: (userId: string) => ['transactions', userId] as const,
 }
 
 const emptyCategories: Category[] = []
 const emptyTransactions: Transaction[] = []
 
-export function useFinance() {
+export function useFinance(userId: string) {
   const queryClient = useQueryClient()
+  const categoriesQueryKey = financeQueryKeys.categories(userId)
+  const transactionsQueryKey = financeQueryKeys.transactions(userId)
 
   const categoriesQuery = useQuery({
-    queryKey: financeQueryKeys.categories,
+    queryKey: categoriesQueryKey,
     queryFn: categoryRepository.list,
   })
 
   const transactionsQuery = useQuery({
-    queryKey: financeQueryKeys.transactions,
+    queryKey: transactionsQueryKey,
     queryFn: transactionRepository.list,
   })
 
-  const categories = categoriesQuery.data ?? emptyCategories
+  const storedCategories = categoriesQuery.data ?? emptyCategories
   const transactions = transactionsQuery.data ?? emptyTransactions
+
+  const categories = useMemo(() => {
+    return storedCategories.map((category) => {
+      const categoryTransactions = transactions.filter(
+        (transaction) => transaction.categoryId === category.id,
+      )
+      const amount = categoryTransactions.reduce(
+        (total, transaction) => total + transaction.amount,
+        0,
+      )
+
+      return {
+        ...category,
+        amount,
+        itemsCount: categoryTransactions.length,
+      }
+    })
+  }, [storedCategories, transactions])
 
   const summary = useMemo(() => {
     const income = transactions
@@ -52,7 +72,7 @@ export function useFinance() {
   const createTransactionMutation = useMutation({
     mutationFn: transactionRepository.create,
     onSuccess(transaction) {
-      queryClient.setQueryData<Transaction[]>(financeQueryKeys.transactions, (current = []) => [
+      queryClient.setQueryData<Transaction[]>(transactionsQueryKey, (current = []) => [
         transaction,
         ...current,
       ])
@@ -63,7 +83,7 @@ export function useFinance() {
     mutationFn: ({ transactionId, input }: { transactionId: string; input: TransactionInput }) =>
       transactionRepository.update(transactionId, input),
     onSuccess(updatedTransaction) {
-      queryClient.setQueryData<Transaction[]>(financeQueryKeys.transactions, (current = []) =>
+      queryClient.setQueryData<Transaction[]>(transactionsQueryKey, (current = []) =>
         current.map((transaction) =>
           transaction.id === updatedTransaction.id ? updatedTransaction : transaction,
         ),
@@ -74,7 +94,7 @@ export function useFinance() {
   const deleteTransactionMutation = useMutation({
     mutationFn: transactionRepository.delete,
     onSuccess(_response, transactionId) {
-      queryClient.setQueryData<Transaction[]>(financeQueryKeys.transactions, (current = []) =>
+      queryClient.setQueryData<Transaction[]>(transactionsQueryKey, (current = []) =>
         current.filter((transaction) => transaction.id !== transactionId),
       )
     },
@@ -83,7 +103,7 @@ export function useFinance() {
   const createCategoryMutation = useMutation({
     mutationFn: categoryRepository.create,
     onSuccess(category) {
-      queryClient.setQueryData<Category[]>(financeQueryKeys.categories, (current = []) => [
+      queryClient.setQueryData<Category[]>(categoriesQueryKey, (current = []) => [
         category,
         ...current,
       ])
@@ -94,7 +114,7 @@ export function useFinance() {
     mutationFn: ({ categoryId, input }: { categoryId: string; input: CategoryInput }) =>
       categoryRepository.update(categoryId, input),
     onSuccess(updatedCategory) {
-      queryClient.setQueryData<Category[]>(financeQueryKeys.categories, (current = []) =>
+      queryClient.setQueryData<Category[]>(categoriesQueryKey, (current = []) =>
         current.map((category) =>
           category.id === updatedCategory.id ? { ...category, ...updatedCategory } : category,
         ),
@@ -105,11 +125,11 @@ export function useFinance() {
   const deleteCategoryMutation = useMutation({
     mutationFn: categoryRepository.delete,
     onSuccess(_response, categoryId) {
-      queryClient.setQueryData<Category[]>(financeQueryKeys.categories, (current = []) =>
+      queryClient.setQueryData<Category[]>(categoriesQueryKey, (current = []) =>
         current.filter((category) => category.id !== categoryId),
       )
 
-      queryClient.setQueryData<Transaction[]>(financeQueryKeys.transactions, (current = []) =>
+      queryClient.setQueryData<Transaction[]>(transactionsQueryKey, (current = []) =>
         current.filter((transaction) => transaction.categoryId !== categoryId),
       )
     },
