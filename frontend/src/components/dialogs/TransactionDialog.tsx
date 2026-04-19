@@ -17,13 +17,11 @@ type TransactionDialogProps = {
   onSubmit: (input: TransactionInput) => void
 }
 
-const today = new Date().toISOString().slice(0, 10)
-
 const initialForm: TransactionInput = {
   title: '',
   amount: 0,
   type: 'expense',
-  date: today,
+  date: '',
   categoryId: '',
 }
 
@@ -50,7 +48,6 @@ export function TransactionDialog({
       }
       : {
         ...initialForm,
-        categoryId: categories[0]?.id || '',
       },
   })
 
@@ -61,17 +58,17 @@ export function TransactionDialog({
 
   return (
     <Dialog
+      description="Registre sua despesa ou receita"
       title={transaction ? 'Editar transação' : 'Nova transação'}
       onClose={onClose}
+      panelClassName="max-w-[448px] rounded-[12px] p-[25px]"
+      headerClassName="mb-6"
+      titleClassName="text-base font-semibold leading-6"
+      footerClassName="mt-6"
       footer={
-        <>
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button type="submit" form="transaction-form" disabled={isSubmitting}>
-            Salvar transação
-          </Button>
-        </>
+        <Button type="submit" form="transaction-form" size="lg" className="h-12 w-full" disabled={isSubmitting}>
+          Salvar
+        </Button>
       }
     >
       <form id="transaction-form" className="grid gap-4" onSubmit={handleSubmit(submitForm)}>
@@ -79,68 +76,83 @@ export function TransactionDialog({
           control={control}
           name="type"
           render={({ field }) => (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 rounded-[12px] border border-[#e5e7eb] p-2">
               <button
                 type="button"
                 className={
                   field.value === 'expense'
-                    ? 'flex h-12 items-center justify-center gap-2 rounded-lg border border-[#ef4444] bg-[#fee2e2] text-base font-medium text-[#dc2626]'
-                    : 'flex h-12 items-center justify-center gap-2 rounded-lg border border-[#d1d5db] bg-white text-base font-medium text-[#374151]'
+                    ? 'flex h-[46px] items-center justify-center gap-3 rounded-lg border border-[#dc2626] bg-[#f8f9fa] px-3 py-[14px] text-base font-medium leading-[18px] text-[#111827]'
+                    : 'flex h-[46px] items-center justify-center gap-3 rounded-lg px-3 py-[14px] text-base font-normal leading-[18px] text-[#4b5563]'
                 }
                 onClick={() => field.onChange('expense')}
               >
-                <CircleArrowDown size={18} />
+                <CircleArrowDown className={field.value === 'expense' ? 'text-[#dc2626]' : 'text-[#9ca3af]'} size={16} />
                 Despesa
               </button>
               <button
                 type="button"
                 className={
                   field.value === 'income'
-                    ? 'flex h-12 items-center justify-center gap-2 rounded-lg border border-[#16a34a] bg-[#dcfce7] text-base font-medium text-[#15803d]'
-                    : 'flex h-12 items-center justify-center gap-2 rounded-lg border border-[#d1d5db] bg-white text-base font-medium text-[#374151]'
+                    ? 'flex h-[46px] items-center justify-center gap-3 rounded-lg border border-[#1f6f43] bg-[#f8f9fa] px-3 py-[14px] text-base font-medium leading-[18px] text-[#111827]'
+                    : 'flex h-[46px] items-center justify-center gap-3 rounded-lg px-3 py-[14px] text-base font-normal leading-[18px] text-[#4b5563]'
                 }
                 onClick={() => field.onChange('income')}
               >
-                <CircleArrowUp size={18} />
+                <CircleArrowUp className={field.value === 'income' ? 'text-[#1f6f43]' : 'text-[#9ca3af]'} size={16} />
                 Receita
               </button>
             </div>
           )}
         />
 
-        <Field label="Título" error={errors.title?.message}>
-          <Input hasError={Boolean(errors.title)} placeholder="Ex: Mercado" {...register('title')} />
+        <Field label="Descrição" error={errors.title?.message}>
+          <Input hasError={Boolean(errors.title)} placeholder="Ex. Almoço no restaurante" {...register('title')} />
         </Field>
 
-        <Field label="Valor" error={errors.amount?.message}>
-          <Controller
-            control={control}
-            name="amount"
-            render={({ field }) => (
-              <Input
-                inputMode="numeric"
-                hasError={Boolean(errors.amount)}
-                placeholder="R$ 0,00"
-                value={formatCurrencyMask(field.value)}
-                onBlur={field.onBlur}
-                onChange={(event) => field.onChange(parseCurrencyMask(event.target.value))}
-              />
-            )}
-          />
-        </Field>
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4">
+          <Field label="Data" error={errors.date?.message}>
+            <Input
+              hasError={Boolean(errors.date)}
+              placeholder="Selecione"
+              {...register('date')}
+            />
+          </Field>
+
+          <Field label="Valor" error={errors.amount?.message}>
+            <Controller
+              control={control}
+              name="amount"
+              render={({ field }) => (
+                <div
+                  className={
+                    errors.amount
+                      ? 'flex h-12 w-full min-w-0 items-center gap-3 rounded-lg border border-app-danger bg-white px-[13px] py-[15px]'
+                      : 'flex h-12 w-full min-w-0 items-center gap-3 rounded-lg border border-[#d1d5db] bg-white px-[13px] py-[15px]'
+                  }
+                >
+                  <span className="text-base leading-[18px] text-[#111827]">R$</span>
+                  <input
+                    inputMode="numeric"
+                    className="min-w-0 flex-1 bg-transparent text-base leading-[18px] text-[#111827] outline-none placeholder:text-[#9ca3af]"
+                    value={formatCurrencyMask(field.value)}
+                    onBlur={field.onBlur}
+                    onChange={(event) => field.onChange(parseCurrencyMask(event.target.value))}
+                  />
+                </div>
+              )}
+            />
+          </Field>
+        </div>
 
         <Field label="Categoria" error={errors.categoryId?.message}>
           <Select hasError={Boolean(errors.categoryId)} {...register('categoryId')}>
+            <option value="">Selecione</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
               </option>
             ))}
           </Select>
-        </Field>
-
-        <Field label="Data" error={errors.date?.message}>
-          <Input type="date" hasError={Boolean(errors.date)} {...register('date')} />
         </Field>
       </form>
     </Dialog>
@@ -149,12 +161,12 @@ export function TransactionDialog({
 
 function formatCurrencyMask(value: number) {
   if (!Number.isFinite(value) || value <= 0) {
-    return ''
+    return '0,00'
   }
 
   return new Intl.NumberFormat('pt-BR', {
-    currency: 'BRL',
-    style: 'currency',
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
   })
     .format(value)
     .replace(/\u00a0/g, ' ')
