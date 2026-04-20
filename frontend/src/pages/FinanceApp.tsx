@@ -357,6 +357,8 @@ function TransactionsScreen({
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [periodFilter, setPeriodFilter] = useState('')
 
+  const periodOptions = useMemo(() => getPeriodOptions(transactions), [transactions])
+
   const filteredTransactions = useMemo(() => {
     return transactions.filter((transaction) => {
       const matchesSearch = transaction.title.toLowerCase().includes(search.toLowerCase())
@@ -398,7 +400,14 @@ function TransactionsScreen({
             </option>
           ))}
         </FilterSelect>
-        <FilterMonth label="Período" value={periodFilter} onChange={setPeriodFilter} />
+        <FilterSelect label="Período" value={periodFilter} onChange={setPeriodFilter}>
+          <option value="">Todos</option>
+          {periodOptions.map((period) => (
+            <option key={period.value} value={period.value}>
+              {period.label}
+            </option>
+          ))}
+        </FilterSelect>
       </section>
 
       <section className="mt-9 overflow-hidden rounded-lg border border-[#e5e7eb] bg-white">
@@ -839,28 +848,6 @@ function FilterSelect({
   )
 }
 
-function FilterMonth({
-  label,
-  onChange,
-  value,
-}: {
-  label: string
-  onChange: (value: string) => void
-  value: string
-}) {
-  return (
-    <label className="grid gap-2">
-      <span className="text-sm font-medium leading-5 text-[#374151]">{label}</span>
-      <input
-        className="h-12 rounded-lg border border-[#d1d5db] bg-white px-[13px] py-[15px] text-base leading-[18px] text-[#111827] outline-none transition focus:border-app-primary focus:ring-4 focus:ring-app-primary-soft"
-        type="month"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      />
-    </label>
-  )
-}
-
 function PanelLoading({ className = '', label }: { className?: string; label: string }) {
   return (
     <div className={`grid min-h-[72px] place-items-center px-6 py-6 text-sm font-medium text-[#4b5563] ${className}`}>
@@ -992,4 +979,26 @@ function getInitials(name: string) {
     .map((part) => part[0])
     .join('')
     .toUpperCase()
+}
+
+function getPeriodOptions(transactions: Transaction[]) {
+  const formatter = new Intl.DateTimeFormat('pt-BR', {
+    month: 'long',
+    timeZone: 'UTC',
+    year: 'numeric',
+  })
+
+  return Array.from(new Set(transactions.map((transaction) => transaction.date.slice(0, 7))))
+    .filter(Boolean)
+    .sort((firstPeriod, secondPeriod) => secondPeriod.localeCompare(firstPeriod))
+    .map((period) => {
+      const [year, month] = period.split('-').map(Number)
+      const date = new Date(Date.UTC(year, month - 1, 1))
+      const label = formatter.format(date)
+
+      return {
+        label: label.charAt(0).toUpperCase() + label.slice(1),
+        value: period,
+      }
+    })
 }
