@@ -125,6 +125,7 @@ export async function updateProfile(
     },
     data: {
       name: input.name,
+      avatarUrl: input.avatarUrl ?? null,
     },
   });
 

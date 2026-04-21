@@ -1,4 +1,5 @@
 import type { PropsWithChildren, ReactNode } from 'react'
+import { motion } from 'framer-motion'
 import { X } from 'lucide-react'
 import { cn } from '../../utils/styles'
 
@@ -25,13 +26,22 @@ export function Dialog({
   onClose,
 }: DialogProps) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-[#111827]/45 p-5" role="presentation">
-      <section
+    <motion.div
+      animate={{ opacity: 1 }}
+      className="fixed inset-0 z-50 grid place-items-center bg-[#111827]/45 p-5"
+      initial={{ opacity: 0 }}
+      role="presentation"
+      transition={{ duration: 0.18, ease: 'easeOut' }}
+    >
+      <motion.section
+        animate={{ opacity: 1, scale: 1, y: 0 }}
         className={cn(
           'w-full rounded-lg border border-[#e5e7eb] bg-white p-6 shadow-[0_20px_25px_-5px_rgb(17_24_39_/_0.1),0_8px_10px_-6px_rgb(17_24_39_/_0.1)]',
           panelClassName ? '' : 'max-w-xl',
           panelClassName,
         )}
+        initial={{ opacity: 0, scale: 0.97, y: 16 }}
+        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
         role="dialog"
         aria-modal="true"
         aria-labelledby="dialog-title"
@@ -60,7 +70,7 @@ export function Dialog({
             {footer}
           </footer>
         ) : null}
-      </section>
-    </div>
+      </motion.section>
+    </motion.div>
   )
 }
