@@ -5,7 +5,7 @@ import { prisma } from '../src/lib/prisma.js';
 const demoUser = {
   name: 'Demo Financy',
   email: 'demo@financy.dev',
-  password: '123456',
+  password: '12345678',
 };
 
 async function main() {

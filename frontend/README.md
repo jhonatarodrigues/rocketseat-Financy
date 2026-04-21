@@ -1,73 +1,95 @@
-# React + TypeScript + Vite
+# Financy Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicacao React do projeto Financy para gerenciamento de categorias e transacoes financeiras.
 
-Currently, two official plugins are available:
+## Tecnologias
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React
+- TypeScript
+- Vite
+- GraphQL
+- Apollo Client
+- React Query
+- React Hook Form
+- Zod
+- TailwindCSS
+- lucide-react
+- pnpm
 
-## React Compiler
+## Setup local
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Crie o arquivo `.env` a partir do exemplo:
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cp .env.example .env
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Configure a URL do backend:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```env
+VITE_BACKEND_URL=http://localhost:3333/graphql
 ```
+
+Instale as dependencias:
+
+```bash
+pnpm install
+```
+
+Rode o frontend:
+
+```bash
+pnpm run dev
+```
+
+Por padrao, o Vite usa:
+
+```txt
+http://localhost:5173
+```
+
+Se a porta estiver ocupada, ele sobe na proxima porta disponivel.
+
+## Scripts
+
+```bash
+pnpm run dev      # inicia o Vite
+pnpm run build    # compila TypeScript e gera build de producao
+pnpm run lint     # executa ESLint
+pnpm run preview  # previsualiza o build
+```
+
+## Fluxo implementado
+
+- Cadastro de usuario.
+- Login com JWT.
+- Restauracao de sessao via `me`.
+- Logout.
+- Listagem, criacao, edicao e exclusao de categorias.
+- Listagem, criacao, edicao e exclusao de transacoes.
+- Dashboard com resumo calculado a partir de dados reais.
+- Filtros de transacoes por busca, tipo, categoria e periodo.
+- Loading e erros para chamadas de API.
+
+## Contrato com o backend
+
+O frontend usa `VITE_BACKEND_URL` para chamar a API GraphQL.
+
+O token JWT e salvo localmente e enviado em:
+
+```txt
+Authorization: Bearer <token>
+```
+
+Os repositories normalizam o contrato:
+
+- Backend `EXPENSE` e `INCOME` viram `expense` e `income` no frontend.
+- Backend salva `amount` em centavos; frontend trabalha em reais.
+- Backend `Category.title/name` vira `Category.name`.
+- Backend `Transaction.description/title` vira `Transaction.title`.
+
+## Observacoes
+
+- `Lembrar-me` salva apenas o e-mail, nao a senha.
+- Recuperacao de senha exibe aviso de indisponibilidade porque nao faz parte dos requisitos obrigatorios.
+- O filtro de periodo usa dropdown com meses existentes nas transacoes para evitar problemas de popup nativo cortado.

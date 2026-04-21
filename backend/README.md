@@ -43,7 +43,7 @@ Usuario criado pelo seed:
 
 ```txt
 Email: demo@financy.dev
-Senha: 123456
+Senha: 12345678
 ```
 
 Rode o servidor em desenvolvimento:
@@ -156,7 +156,7 @@ mutation Register {
 
 ```graphql
 mutation Login {
-  login(input: { email: "demo@financy.dev", password: "123456" }) {
+  login(input: { email: "demo@financy.dev", password: "12345678" }) {
     token
     user {
       id

@@ -379,7 +379,7 @@ function TransactionsScreen({
         title="Transações"
       />
 
-      <section className="mt-8 grid gap-4 rounded-lg border border-[#e5e7eb] bg-white p-6 lg:grid-cols-4">
+      <section className="mt-8 grid gap-4 rounded-lg border border-[#e5e7eb] bg-white p-4 sm:p-6 md:grid-cols-2 xl:grid-cols-4">
         <FilterInput
           icon={<Search size={16} />}
           label="Buscar"
@@ -806,9 +806,9 @@ function FilterInput({
   value: string
 }) {
   return (
-    <label className="grid gap-2">
+    <label className="grid min-w-0 gap-2">
       <span className="text-sm font-medium leading-5 text-[#374151]">{label}</span>
-      <div className="flex h-12 items-center gap-3 rounded-lg border border-[#d1d5db] bg-white px-[13px] py-[15px] text-[#9ca3af]">
+      <div className="flex h-12 min-w-0 items-center gap-3 rounded-lg border border-[#d1d5db] bg-white px-[13px] py-[15px] text-[#9ca3af]">
         {icon}
         <input
           className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-[#9ca3af]"
@@ -832,9 +832,9 @@ function FilterSelect({
   value: string
 }>) {
   return (
-    <label className="grid gap-2">
+    <label className="grid min-w-0 gap-2">
       <span className="text-sm font-medium leading-5 text-[#374151]">{label}</span>
-      <span className="relative">
+      <span className="relative min-w-0">
         <select
           className="h-12 w-full appearance-none rounded-lg border border-[#d1d5db] bg-white px-[13px] py-[15px] pr-10 text-base leading-[18px] text-[#111827] outline-none transition focus:border-app-primary focus:ring-4 focus:ring-app-primary-soft"
           value={value}
