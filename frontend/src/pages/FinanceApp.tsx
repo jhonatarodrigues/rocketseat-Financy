@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { PropsWithChildren, ReactNode } from 'react'
+import { motion } from 'framer-motion'
 import {
   ArrowLeft,
   ArrowRight,
@@ -9,6 +10,7 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   CarFront,
+  Camera,
   ChevronDown,
   ChevronRight,
   CircleArrowDown,
@@ -47,6 +49,18 @@ import logoWord from '../assets/figma/logo-word.svg'
 type Page = 'dashboard' | 'transactions' | 'categories' | 'profile'
 
 const TRANSACTIONS_PER_PAGE = 10
+
+const pageAnimation = {
+  animate: { opacity: 1, y: 0 },
+  initial: { opacity: 0, y: 14 },
+  transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
+} as const
+
+const itemAnimation = {
+  animate: { opacity: 1, y: 0 },
+  initial: { opacity: 0, y: 10 },
+  transition: { duration: 0.22, ease: 'easeOut' },
+} as const
 
 type FinanceAppProps = {
   isUpdatingProfile: boolean
@@ -96,7 +110,7 @@ export function FinanceApp({ isUpdatingProfile, onLogout, onUpdateProfile, user 
 
   return (
     <main className="min-h-screen bg-[#f8f9fa] text-[#111827]">
-      <TopNavbar activePage={page} initials={initials} onNavigate={setPage} />
+      <TopNavbar activePage={page} avatarUrl={user.avatarUrl} initials={initials} onNavigate={setPage} />
 
       {page === 'dashboard' ? (
         <DashboardScreen
@@ -219,11 +233,12 @@ export function FinanceApp({ isUpdatingProfile, onLogout, onUpdateProfile, user 
 
 type TopNavbarProps = {
   activePage: Page
+  avatarUrl?: string | null
   initials: string
   onNavigate: (page: Page) => void
 }
 
-function TopNavbar({ activePage, initials, onNavigate }: TopNavbarProps) {
+function TopNavbar({ activePage, avatarUrl, initials, onNavigate }: TopNavbarProps) {
   return (
     <header className="border-b border-[#e5e7eb] bg-white">
       <div className="mx-auto flex h-[69px] w-full max-w-[1280px] items-center justify-between px-6 sm:px-12">
@@ -250,10 +265,10 @@ function TopNavbar({ activePage, initials, onNavigate }: TopNavbarProps) {
 
         <button
           type="button"
-          className="grid h-9 w-9 place-items-center rounded-full bg-[#d1d5db] text-sm font-normal leading-5 text-[#374151]"
+          className="grid h-9 w-9 overflow-hidden rounded-full bg-[#d1d5db] text-sm font-normal leading-5 text-[#374151]"
           onClick={() => onNavigate('profile')}
         >
-          {initials}
+          <AvatarImage avatarUrl={avatarUrl} initials={initials} />
         </button>
       </div>
       <nav className="mx-auto flex h-12 w-full max-w-[1280px] items-center justify-center gap-5 border-t border-[#e5e7eb] px-6 text-sm leading-5 text-[#4b5563] md:hidden">
@@ -313,7 +328,7 @@ function DashboardScreen({
   const recentTransactions = transactions.slice(0, 5)
 
   return (
-    <section className="mx-auto grid w-full max-w-[1280px] gap-6 px-6 py-12 sm:px-12">
+    <motion.section {...pageAnimation} className="mx-auto grid w-full max-w-[1280px] gap-6 px-6 py-12 sm:px-12">
       <div className="grid gap-6 lg:grid-cols-3">
         <MetricCard icon={<Wallet size={20} />} label="Saldo total" value={formatCurrency(summary.balance)} />
         <MetricCard
@@ -384,7 +399,7 @@ function DashboardScreen({
           </div>
         </section>
       </div>
-    </section>
+    </motion.section>
   )
 }
 
@@ -460,7 +475,7 @@ function TransactionsScreen({
   }
 
   return (
-    <section className="mx-auto w-full max-w-[1280px] px-6 py-12 sm:px-12">
+    <motion.section {...pageAnimation} className="mx-auto w-full max-w-[1280px] px-6 py-12 sm:px-12">
       <PageTitle
         actionLabel="Nova transação"
         description="Gerencie todas as suas transações financeiras"
@@ -558,7 +573,7 @@ function TransactionsScreen({
           </footer>
         ) : null}
       </section>
-    </section>
+    </motion.section>
   )
 }
 
@@ -584,7 +599,7 @@ function CategoriesScreen({
   )[0]
 
   return (
-    <section className="mx-auto w-full max-w-[1280px] px-6 py-12 sm:px-12">
+    <motion.section {...pageAnimation} className="mx-auto w-full max-w-[1280px] px-6 py-12 sm:px-12">
       <PageTitle
         actionLabel="Nova categoria"
         description="Organize suas transações por categorias"
@@ -613,16 +628,17 @@ function CategoriesScreen({
         {!isLoading && categories.length === 0 ? (
           <PanelEmpty className="sm:col-span-2 lg:col-span-4" label="Nenhuma categoria cadastrada." />
         ) : null}
-        {!isLoading && categories.map((category) => (
+        {!isLoading && categories.map((category, index) => (
           <CategoryCard
             category={category}
+            index={index}
             key={category.id}
             onDelete={() => onDeleteCategory(category)}
             onEdit={() => onEditCategory(category)}
           />
         ))}
       </section>
-    </section>
+    </motion.section>
   )
 }
 
@@ -637,11 +653,14 @@ type ProfileScreenProps = {
 function ProfileScreen({ initials, isSaving, onLogout, onUpdateProfile, user }: ProfileScreenProps) {
   const [name, setName] = useState(user.name)
   const [toast, setToast] = useState<{ id: number; tone: 'success' | 'error'; message: string } | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(user.avatarUrl ?? null)
+  const [avatarError, setAvatarError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function saveProfile() {
     setToast(null)
     try {
-      await onUpdateProfile({ name })
+      await onUpdateProfile({ name, avatarUrl })
       setToast({
         id: Date.now(),
         tone: 'success',
@@ -656,16 +675,76 @@ function ProfileScreen({ initials, isSaving, onLogout, onUpdateProfile, user }: 
     }
   }
 
+  async function selectAvatar(file: File | undefined) {
+    setAvatarError(null)
+
+    if (!file) {
+      return
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setAvatarError('Selecione um arquivo de imagem.')
+      return
+    }
+
+    if (file.size > 1_000_000) {
+      setAvatarError('A imagem deve ter no máximo 1 MB.')
+      return
+    }
+
+    const image = await fileToDataUrl(file)
+    setAvatarUrl(image)
+  }
+
   return (
-    <section className="mx-auto flex w-full max-w-[1280px] justify-center px-6 py-12 sm:px-12">
+    <motion.section {...pageAnimation} className="mx-auto flex w-full max-w-[1280px] justify-center px-6 py-12 sm:px-12">
       <div className="flex w-[448px] max-w-full flex-col gap-8 rounded-xl border border-[#e5e7eb] bg-white p-[33px]">
         <header className="flex flex-col items-center gap-6 text-center">
-          <div className="grid h-16 w-16 place-items-center rounded-full bg-[#d1d5db] text-[28px] font-normal leading-10 text-[#374151]">
-            {initials}
-          </div>
+          <motion.div
+            animate={{ opacity: 1, scale: 1 }}
+            className="grid h-16 w-16 overflow-hidden rounded-full bg-[#d1d5db] text-[28px] font-normal leading-10 text-[#374151]"
+            initial={{ opacity: 0, scale: 0.92 }}
+            key={avatarUrl ?? 'initials'}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+          >
+            <AvatarImage avatarUrl={avatarUrl} initials={initials} />
+          </motion.div>
           <div>
             <h1 className="text-xl font-bold leading-7 text-[#111827]">{user.name}</h1>
             <p className="text-base leading-6 text-[#4b5563]">{user.email}</p>
+          </div>
+          <div className="grid gap-2">
+            <input
+              ref={fileInputRef}
+              accept="image/*"
+              className="hidden"
+              type="file"
+              onChange={(event) => void selectAvatar(event.target.files?.[0])}
+            />
+            <div className="flex items-center justify-center gap-2">
+              <motion.button
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.98 }}
+                className="flex h-9 items-center justify-center gap-2 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151]"
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Camera size={16} />
+                Alterar foto
+              </motion.button>
+              {avatarUrl ? (
+                <motion.button
+                  whileHover={{ y: -1 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="h-9 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#dc2626]"
+                  type="button"
+                  onClick={() => setAvatarUrl(null)}
+                >
+                  Remover
+                </motion.button>
+              ) : null}
+            </div>
+            {avatarError ? <span className="text-xs font-medium text-[#dc2626]">{avatarError}</span> : null}
           </div>
         </header>
 
@@ -689,27 +768,31 @@ function ProfileScreen({ initials, isSaving, onLogout, onUpdateProfile, user }: 
         </div>
 
         <div className="grid gap-4">
-          <button
+          <motion.button
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.98 }}
             className="h-12 rounded-lg bg-[#1f6f43] text-base font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
             type="button"
             disabled={isSaving}
             onClick={saveProfile}
           >
             {isSaving ? 'Salvando...' : 'Salvar alterações'}
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.98 }}
             className="flex h-12 items-center justify-center gap-2 rounded-lg border border-[#d1d5db] bg-white text-base font-medium text-[#374151]"
             type="button"
             onClick={onLogout}
           >
             <LogOut className="text-[#dc2626]" size={18} />
             Sair da conta
-          </button>
+          </motion.button>
         </div>
       </div>
 
       {toast ? <ApiToast key={toast.id} message={toast.message} tone={toast.tone} /> : null}
-    </section>
+    </motion.section>
   )
 }
 
@@ -722,7 +805,7 @@ type MetricCardProps = {
 
 function MetricCard({ icon, iconClassName = 'text-[#9333ea]', label, value }: MetricCardProps) {
   return (
-    <article className="h-[118px] rounded-lg border border-[#e5e7eb] bg-white p-6">
+    <motion.article {...itemAnimation} className="h-[118px] rounded-lg border border-[#e5e7eb] bg-white p-6">
       <div className="flex items-center gap-3">
         <span className={iconClassName}>{icon}</span>
         <span className="text-xs font-medium uppercase leading-4 tracking-[0.04em] text-[#6b7280]">
@@ -730,7 +813,7 @@ function MetricCard({ icon, iconClassName = 'text-[#9333ea]', label, value }: Me
         </span>
       </div>
       <strong className="mt-4 block text-[28px] font-bold leading-8 text-[#111827]">{value}</strong>
-    </article>
+    </motion.article>
   )
 }
 
@@ -765,7 +848,7 @@ function DashboardTransactionRow({
   const isIncome = transaction.type === 'income'
 
   return (
-    <div className="grid min-h-20 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-[#e5e7eb] px-6 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_160px_160px]">
+    <motion.div {...itemAnimation} className="grid min-h-20 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-[#e5e7eb] px-6 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_160px_160px]">
       <div className="flex items-center gap-4">
         <IconBadge category={category} icon={<Icon size={16} />} />
         <div>
@@ -791,7 +874,7 @@ function DashboardTransactionRow({
           <CircleArrowDown className="text-[#ef4444]" size={16} />
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }
 
@@ -810,7 +893,7 @@ function TransactionTableRow({
   const isIncome = transaction.type === 'income'
 
   return (
-    <div className="grid min-h-[72px] gap-3 border-b border-[#e5e7eb] px-4 py-4 last:border-b-0 lg:grid-cols-[minmax(280px,1fr)_112px_200px_136px_160px_96px] lg:gap-0 lg:px-0 lg:py-0">
+    <motion.div {...itemAnimation} className="grid min-h-[72px] gap-3 border-b border-[#e5e7eb] px-4 py-4 last:border-b-0 lg:grid-cols-[minmax(280px,1fr)_112px_200px_136px_160px_96px] lg:gap-0 lg:px-0 lg:py-0">
       <div className="flex items-center gap-4 lg:px-6">
         <IconBadge category={category} icon={<Icon size={16} />} />
         <span className="text-base leading-6 text-[#111827]">{transaction.title}</span>
@@ -841,7 +924,7 @@ function TransactionTableRow({
           <Edit2 size={16} />
         </IconButton>
       </div>
-    </div>
+    </motion.div>
   )
 }
 
@@ -852,15 +935,23 @@ function CategoriesScreenIcon({ category, size = 16 }: { category: Category; siz
 
 function CategoryCard({
   category,
+  index,
   onDelete,
   onEdit,
 }: {
   category: Category
+  index: number
   onDelete: () => void
   onEdit: () => void
 }) {
   return (
-    <article className="h-[226px] rounded-lg border border-[#e5e7eb] bg-white p-6">
+    <motion.article
+      animate={{ opacity: 1, y: 0 }}
+      className="h-[226px] rounded-lg border border-[#e5e7eb] bg-white p-6"
+      initial={{ opacity: 0, y: 12 }}
+      transition={{ delay: Math.min(index * 0.04, 0.2), duration: 0.24, ease: 'easeOut' }}
+      whileHover={{ y: -2 }}
+    >
       <header className="flex items-start justify-between">
         <IconBadge category={category} icon={<CategoriesScreenIcon category={category} />} />
         <div className="flex gap-2">
@@ -882,7 +973,7 @@ function CategoryCard({
         <CategoryTag category={category} />
         <span className="text-sm leading-5 text-[#4b5563]">{category.itemsCount} itens</span>
       </footer>
-    </article>
+    </motion.article>
   )
 }
 
@@ -898,7 +989,7 @@ function CategoryMetric({
   value: string
 }) {
   return (
-    <article className="flex h-[106px] items-center gap-4 rounded-lg border border-[#e5e7eb] bg-white p-6">
+    <motion.article {...itemAnimation} className="flex h-[106px] items-center gap-4 rounded-lg border border-[#e5e7eb] bg-white p-6">
       <span className={iconClassName}>{icon}</span>
       <div>
         <strong className="block text-[28px] font-bold leading-8 text-[#111827]">{value}</strong>
@@ -906,7 +997,7 @@ function CategoryMetric({
           {label}
         </span>
       </div>
-    </article>
+    </motion.article>
   )
 }
 
@@ -1025,15 +1116,18 @@ function ApiErrorToast({ message }: { message: string }) {
 
 function ApiToast({ message, tone }: { message: string; tone: 'error' | 'success' }) {
   return (
-    <div
+    <motion.div
+      animate={{ opacity: 1, y: 0 }}
       className={
         tone === 'success'
           ? 'animate-toast-autohide fixed bottom-6 left-6 z-50 max-w-sm rounded-lg border border-[#dcfce7] bg-[#f0fdf4] px-4 py-3 text-sm font-medium text-[#15803d] shadow-lg'
           : 'animate-toast-autohide fixed bottom-6 left-6 z-50 max-w-sm rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 shadow-lg'
       }
+      initial={{ opacity: 0, y: 8 }}
+      transition={{ duration: 0.18, ease: 'easeOut' }}
     >
       {message}
-    </div>
+    </motion.div>
   )
 }
 
@@ -1197,6 +1291,14 @@ function CategoryTag({ category }: { category: Category }) {
   )
 }
 
+function AvatarImage({ avatarUrl, initials }: { avatarUrl?: string | null; initials: string }) {
+  if (avatarUrl) {
+    return <img alt="" className="h-full w-full object-cover" src={avatarUrl} />
+  }
+
+  return <span className="grid h-full w-full place-items-center">{initials}</span>
+}
+
 function getInitials(name: string) {
   return name
     .split(' ')
@@ -1235,5 +1337,23 @@ function sortTransactionsByDate(transactions: Transaction[]) {
     const secondDate = new Date(secondTransaction.date).getTime()
 
     return secondDate - firstDate
+  })
+}
+
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result)
+        return
+      }
+
+      reject(new Error('Não foi possível carregar a imagem.'))
+    }
+
+    reader.onerror = () => reject(new Error('Não foi possível carregar a imagem.'))
+    reader.readAsDataURL(file)
   })
 }

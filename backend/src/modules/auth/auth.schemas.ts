@@ -13,4 +13,10 @@ export const loginInputSchema = z.object({
 
 export const updateProfileInputSchema = z.object({
   name: z.string().trim().min(2, 'Name must have at least 2 characters'),
+  avatarUrl: z
+    .string()
+    .max(1_500_000, 'Image is too large')
+    .refine((value) => !value || value.startsWith('data:image/'), 'Invalid image format')
+    .nullable()
+    .optional(),
 });

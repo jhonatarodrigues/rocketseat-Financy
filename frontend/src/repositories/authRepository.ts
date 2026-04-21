@@ -33,6 +33,7 @@ export const authRepository = {
               id
               name
               email
+              avatarUrl
             }
           }
         }
@@ -55,6 +56,7 @@ export const authRepository = {
               id
               name
               email
+              avatarUrl
             }
           }
         }
@@ -75,6 +77,7 @@ export const authRepository = {
             id
             name
             email
+            avatarUrl
           }
         }
       `,
@@ -93,6 +96,7 @@ export const authRepository = {
             id
             name
             email
+            avatarUrl
           }
         }
       `,

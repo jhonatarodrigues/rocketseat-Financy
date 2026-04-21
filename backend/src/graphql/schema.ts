@@ -21,6 +21,7 @@ export const schema = createSchema<GraphQLContext>({
       id: ID!
       name: String!
       email: String!
+      avatarUrl: String
       createdAt: String!
       updatedAt: String!
     }
@@ -72,6 +73,7 @@ export const schema = createSchema<GraphQLContext>({
 
     input UpdateProfileInput {
       name: String!
+      avatarUrl: String
     }
 
     input CreateCategoryInput {

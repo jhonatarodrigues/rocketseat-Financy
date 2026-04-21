@@ -2,6 +2,7 @@ export type User = {
   id: string
   name: string
   email: string
+  avatarUrl?: string | null
 }
 
 export type Category = {
@@ -40,6 +41,7 @@ export type RegisterInput = {
 
 export type UpdateProfileInput = {
   name: string
+  avatarUrl?: string | null
 }
 
 export type TransactionInput = {
