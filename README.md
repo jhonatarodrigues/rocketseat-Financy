@@ -122,10 +122,3 @@ pnpm run build
 
 - [Backend](./backend/README.md)
 - [Frontend](./frontend/README.md)
-
-## Observacoes
-
-- O banco SQLite local fica em `backend/dev.db` e nao deve ser commitado.
-- Os valores monetarios sao salvos no backend em centavos.
-- O frontend exibe e edita valores em reais.
-- Funcionalidades extras devem ser implementadas em outra branch para preservar a entrega obrigatoria.
