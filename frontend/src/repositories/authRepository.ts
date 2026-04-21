@@ -4,7 +4,7 @@ import {
   graphqlRequest,
   persistAuthToken,
 } from '../graphql/client'
-import type { LoginInput, RegisterInput, User } from '../types/finance'
+import type { LoginInput, RegisterInput, UpdateProfileInput, User } from '../types/finance'
 
 const AUTH_STORAGE_KEY = '@financy:user'
 
@@ -83,6 +83,25 @@ export const authRepository = {
     window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data.me))
 
     return data.me
+  },
+
+  async updateProfile(input: UpdateProfileInput) {
+    const data = await graphqlRequest<{ updateProfile: User }, { input: UpdateProfileInput }>(
+      /* GraphQL */ `
+        mutation UpdateProfile($input: UpdateProfileInput!) {
+          updateProfile(input: $input) {
+            id
+            name
+            email
+          }
+        }
+      `,
+      { input },
+    )
+
+    window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data.updateProfile))
+
+    return data.updateProfile
   },
 
   logout() {

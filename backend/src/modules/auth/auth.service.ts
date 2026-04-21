@@ -5,7 +5,11 @@ import { env } from '../../config/env.js';
 import type { GraphQLContext } from '../../graphql/context.js';
 import { badRequest, parseInput, unauthorized } from '../shared/errors.js';
 import { mapUser } from './auth.mapper.js';
-import { loginInputSchema, registerInputSchema } from './auth.schemas.js';
+import {
+  loginInputSchema,
+  registerInputSchema,
+  updateProfileInputSchema,
+} from './auth.schemas.js';
 
 type AuthUser = ReturnType<typeof mapUser>;
 
@@ -100,6 +104,29 @@ export async function me(
   if (!user) {
     throw unauthorized();
   }
+
+  return mapUser(user);
+}
+
+export async function updateProfile(
+  _: unknown,
+  args: { input: unknown },
+  context: GraphQLContext,
+): Promise<AuthUser> {
+  if (!context.userId) {
+    throw unauthorized();
+  }
+
+  const input = parseInput(updateProfileInputSchema.safeParse(args.input));
+
+  const user = await context.prisma.user.update({
+    where: {
+      id: context.userId,
+    },
+    data: {
+      name: input.name,
+    },
+  });
 
   return mapUser(user);
 }

@@ -38,6 +38,10 @@ export type RegisterInput = {
   password: string
 }
 
+export type UpdateProfileInput = {
+  name: string
+}
+
 export type TransactionInput = {
   title: string
   amount: number

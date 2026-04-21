@@ -17,7 +17,14 @@ function App() {
     return <LoginPage error={auth.error} isLoading={auth.isLoading} onLogin={auth.login} onRegister={auth.register} />
   }
 
-  return <FinanceApp user={auth.user} onLogout={auth.logout} />
+  return (
+    <FinanceApp
+      user={auth.user}
+      isUpdatingProfile={auth.isLoading}
+      onLogout={auth.logout}
+      onUpdateProfile={auth.updateProfile}
+    />
+  )
 }
 
 export default App

@@ -1,7 +1,7 @@
 import { createSchema } from 'graphql-yoga';
 
 import type { GraphQLContext } from './context.js';
-import { login, me, register } from '../modules/auth/auth.service.js';
+import { login, me, register, updateProfile } from '../modules/auth/auth.service.js';
 import {
   categories,
   createCategory,
@@ -70,6 +70,10 @@ export const schema = createSchema<GraphQLContext>({
       password: String!
     }
 
+    input UpdateProfileInput {
+      name: String!
+    }
+
     input CreateCategoryInput {
       title: String!
       description: String
@@ -120,6 +124,7 @@ export const schema = createSchema<GraphQLContext>({
     type Mutation {
       register(input: RegisterInput!): AuthPayload!
       login(input: LoginInput!): AuthPayload!
+      updateProfile(input: UpdateProfileInput!): User!
       createCategory(input: CreateCategoryInput!): Category!
       updateCategory(input: UpdateCategoryInput!): Category!
       deleteCategory(input: DeleteCategoryInput!): Boolean!
@@ -138,6 +143,7 @@ export const schema = createSchema<GraphQLContext>({
     Mutation: {
       register,
       login,
+      updateProfile,
       createCategory,
       updateCategory,
       deleteCategory,

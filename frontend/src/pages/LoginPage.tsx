@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { InputHTMLAttributes, PropsWithChildren, ReactNode } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { Eye, EyeOff, LockKeyhole, Mail, UserRoundPlus } from 'lucide-react'
+import { Eye, EyeOff, LockKeyhole, Mail, UserRound, UserRoundPlus } from 'lucide-react'
 import {
   loginSchema,
   registerSchema,
@@ -99,6 +99,7 @@ export function LoginPage({ error, isLoading, onLogin, onRegister }: LoginPagePr
               <FigmaField label="Nome" error={'name' in errors ? errors.name?.message : undefined}>
                 <FigmaTextInput
                   hasError={'name' in errors && Boolean(errors.name)}
+                  icon={<UserRound size={16} strokeWidth={1.5} />}
                   placeholder="Seu nome"
                   {...register('name')}
                 />

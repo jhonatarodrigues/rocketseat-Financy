@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { authRepository } from '../../../repositories/authRepository'
-import type { LoginInput, RegisterInput, User } from '../../../types/finance'
+import type { LoginInput, RegisterInput, UpdateProfileInput, User } from '../../../types/finance'
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(() => authRepository.getPersistedUser())
@@ -50,8 +50,9 @@ export function useAuth() {
       const response = await authRepository.login(input)
       setUser(response.user)
     } catch (requestError) {
-      setError(getErrorMessage(requestError))
-      throw requestError
+      const message = getErrorMessage(requestError)
+      setError(message)
+      throw new Error(message)
     } finally {
       setIsLoading(false)
     }
@@ -64,8 +65,24 @@ export function useAuth() {
       const response = await authRepository.register(input)
       setUser(response.user)
     } catch (requestError) {
-      setError(getErrorMessage(requestError))
-      throw requestError
+      const message = getErrorMessage(requestError)
+      setError(message)
+      throw new Error(message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  async function updateProfile(input: UpdateProfileInput) {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const response = await authRepository.updateProfile(input)
+      setUser(response)
+    } catch (requestError) {
+      const message = getErrorMessage(requestError)
+      setError(message)
+      throw new Error(message)
     } finally {
       setIsLoading(false)
     }
@@ -84,6 +101,7 @@ export function useAuth() {
     isLoading,
     login,
     register,
+    updateProfile,
     logout,
   }
 }

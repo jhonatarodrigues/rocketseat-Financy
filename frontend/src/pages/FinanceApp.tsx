@@ -18,7 +18,8 @@ import {
   Gift,
   HeartPulse,
   House,
-  LockKeyhole,
+  LogOut,
+  Mail,
   Mailbox,
   PawPrint,
   PiggyBank,
@@ -30,22 +31,28 @@ import {
   Ticket,
   ToolCase,
   Trash2,
+  UserRound,
   Utensils,
   Wallet,
 } from 'lucide-react'
 import { CategoryDialog } from '../components/dialogs/CategoryDialog'
 import { TransactionDialog } from '../components/dialogs/TransactionDialog'
+import { Dialog } from '../components/ui/Dialog'
 import { useFinance } from '../features/finance/hooks/useFinance'
-import type { Category, Transaction, User } from '../types/finance'
+import type { Category, Transaction, UpdateProfileInput, User } from '../types/finance'
 import { formatCurrency, shortDateFormatter } from '../utils/formatters'
 import logoMark from '../assets/figma/logo-mark.svg'
 import logoWord from '../assets/figma/logo-word.svg'
 
 type Page = 'dashboard' | 'transactions' | 'categories' | 'profile'
 
+const TRANSACTIONS_PER_PAGE = 10
+
 type FinanceAppProps = {
+  isUpdatingProfile: boolean
   user: User
   onLogout: () => void
+  onUpdateProfile: (input: UpdateProfileInput) => Promise<void>
 }
 
 const iconMap = {
@@ -69,11 +76,17 @@ const iconMap = {
   utensils: Utensils,
 }
 
-export function FinanceApp({ onLogout, user }: FinanceAppProps) {
+type DeleteConfirmation =
+  | { type: 'category'; id: string; title: string }
+  | { type: 'transaction'; id: string; title: string }
+  | null
+
+export function FinanceApp({ isUpdatingProfile, onLogout, onUpdateProfile, user }: FinanceAppProps) {
   const finance = useFinance(user.id)
   const [page, setPage] = useState<Page>('dashboard')
   const [transactionDialog, setTransactionDialog] = useState<Transaction | null | undefined>()
   const [categoryDialog, setCategoryDialog] = useState<Category | null | undefined>()
+  const [deleteConfirmation, setDeleteConfirmation] = useState<DeleteConfirmation>(null)
 
   const categoriesById = useMemo(() => {
     return new Map(finance.categories.map((category) => [category.id, category]))
@@ -103,7 +116,13 @@ export function FinanceApp({ onLogout, user }: FinanceAppProps) {
           categoriesById={categoriesById}
           isLoading={finance.isLoading}
           onCreateTransaction={() => setTransactionDialog(null)}
-          onDeleteTransaction={finance.deleteTransaction}
+          onDeleteTransaction={(transaction) =>
+            setDeleteConfirmation({
+              type: 'transaction',
+              id: transaction.id,
+              title: transaction.title,
+            })
+          }
           onEditTransaction={setTransactionDialog}
           transactions={finance.transactions}
         />
@@ -114,17 +133,31 @@ export function FinanceApp({ onLogout, user }: FinanceAppProps) {
           categories={finance.categories}
           isLoading={finance.isLoading}
           onCreateCategory={() => setCategoryDialog(null)}
-          onDeleteCategory={finance.deleteCategory}
+          onDeleteCategory={(category) =>
+            setDeleteConfirmation({
+              type: 'category',
+              id: category.id,
+              title: category.name,
+            })
+          }
           onEditCategory={setCategoryDialog}
           transactionsCount={finance.transactions.length}
         />
       ) : null}
 
-      {page === 'profile' ? <ProfileScreen initials={initials} onLogout={onLogout} user={user} /> : null}
+      {page === 'profile' ? (
+        <ProfileScreen
+          initials={initials}
+          isSaving={isUpdatingProfile}
+          onLogout={onLogout}
+          onUpdateProfile={onUpdateProfile}
+          user={user}
+        />
+      ) : null}
 
       {finance.isMutating ? <ApiLoadingOverlay /> : null}
 
-      {finance.error ? <ApiErrorToast message={finance.error} /> : null}
+      {finance.error ? <ApiErrorToast key={finance.error} message={finance.error} /> : null}
 
       {transactionDialog !== undefined ? (
         <TransactionDialog
@@ -155,6 +188,28 @@ export function FinanceApp({ onLogout, user }: FinanceAppProps) {
             }
 
             await finance.createCategory(input)
+          }}
+        />
+      ) : null}
+
+      {deleteConfirmation ? (
+        <ConfirmDeleteDialog
+          itemName={deleteConfirmation.title}
+          itemType={deleteConfirmation.type === 'category' ? 'categoria' : 'transação'}
+          onClose={() => setDeleteConfirmation(null)}
+          onConfirm={async () => {
+            const confirmation = deleteConfirmation
+            setDeleteConfirmation(null)
+
+            try {
+              if (confirmation.type === 'category') {
+                await finance.deleteCategory(confirmation.id)
+              } else {
+                await finance.deleteTransaction(confirmation.id)
+              }
+            } catch {
+              // The finance hook exposes mutation errors through the toast.
+            }
           }}
         />
       ) : null}
@@ -338,7 +393,7 @@ type TransactionsScreenProps = {
   categoriesById: Map<string, Category>
   isLoading: boolean
   onCreateTransaction: () => void
-  onDeleteTransaction: (id: string) => void
+  onDeleteTransaction: (transaction: Transaction) => void
   onEditTransaction: (transaction: Transaction) => void
   transactions: Transaction[]
 }
@@ -356,11 +411,13 @@ function TransactionsScreen({
   const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [periodFilter, setPeriodFilter] = useState('')
+  const [page, setPage] = useState(1)
 
-  const periodOptions = useMemo(() => getPeriodOptions(transactions), [transactions])
+  const sortedTransactions = useMemo(() => sortTransactionsByDate(transactions), [transactions])
+  const periodOptions = useMemo(() => getPeriodOptions(sortedTransactions), [sortedTransactions])
 
   const filteredTransactions = useMemo(() => {
-    return transactions.filter((transaction) => {
+    return sortedTransactions.filter((transaction) => {
       const matchesSearch = transaction.title.toLowerCase().includes(search.toLowerCase())
       const matchesType = typeFilter === 'all' || transaction.type === typeFilter
       const matchesCategory = categoryFilter === 'all' || transaction.categoryId === categoryFilter
@@ -368,7 +425,39 @@ function TransactionsScreen({
 
       return matchesSearch && matchesType && matchesCategory && matchesPeriod
     })
-  }, [categoryFilter, periodFilter, search, transactions, typeFilter])
+  }, [categoryFilter, periodFilter, search, sortedTransactions, typeFilter])
+  const totalPages = Math.ceil(filteredTransactions.length / TRANSACTIONS_PER_PAGE)
+  const currentPage = Math.min(page, totalPages || 1)
+  const shouldShowPagination = totalPages > 1
+  const shouldShowResultsCount = filteredTransactions.length > 0
+  const visibleTransactions = filteredTransactions.slice(
+    (currentPage - 1) * TRANSACTIONS_PER_PAGE,
+    currentPage * TRANSACTIONS_PER_PAGE,
+  )
+  const firstVisibleItem = filteredTransactions.length
+    ? (currentPage - 1) * TRANSACTIONS_PER_PAGE + 1
+    : 0
+  const lastVisibleItem = Math.min(currentPage * TRANSACTIONS_PER_PAGE, filteredTransactions.length)
+
+  function updateSearch(value: string) {
+    setSearch(value)
+    setPage(1)
+  }
+
+  function updateTypeFilter(value: string) {
+    setTypeFilter(value as typeof typeFilter)
+    setPage(1)
+  }
+
+  function updateCategoryFilter(value: string) {
+    setCategoryFilter(value)
+    setPage(1)
+  }
+
+  function updatePeriodFilter(value: string) {
+    setPeriodFilter(value)
+    setPage(1)
+  }
 
   return (
     <section className="mx-auto w-full max-w-[1280px] px-6 py-12 sm:px-12">
@@ -385,14 +474,14 @@ function TransactionsScreen({
           label="Buscar"
           placeholder="Buscar por descrição"
           value={search}
-          onChange={setSearch}
+          onChange={updateSearch}
         />
-        <FilterSelect label="Tipo" value={typeFilter} onChange={(value) => setTypeFilter(value as typeof typeFilter)}>
+        <FilterSelect label="Tipo" value={typeFilter} onChange={updateTypeFilter}>
           <option value="all">Todos</option>
           <option value="income">Receitas</option>
           <option value="expense">Despesas</option>
         </FilterSelect>
-        <FilterSelect label="Categoria" value={categoryFilter} onChange={setCategoryFilter}>
+        <FilterSelect label="Categoria" value={categoryFilter} onChange={updateCategoryFilter}>
           <option value="all">Todas</option>
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
@@ -400,7 +489,7 @@ function TransactionsScreen({
             </option>
           ))}
         </FilterSelect>
-        <FilterSelect label="Período" value={periodFilter} onChange={setPeriodFilter}>
+        <FilterSelect label="Período" value={periodFilter} onChange={updatePeriodFilter}>
           <option value="">Todos</option>
           {periodOptions.map((period) => (
             <option key={period.value} value={period.value}>
@@ -411,7 +500,7 @@ function TransactionsScreen({
       </section>
 
       <section className="mt-9 overflow-hidden rounded-lg border border-[#e5e7eb] bg-white">
-        <div className="hidden h-14 grid-cols-[414px_112px_200px_136px_200px_120px] border-b border-[#e5e7eb] bg-white text-xs font-medium uppercase leading-4 text-[#6b7280] lg:grid">
+        <div className="hidden h-14 grid-cols-[minmax(280px,1fr)_112px_200px_136px_160px_96px] border-b border-[#e5e7eb] bg-white text-xs font-medium uppercase leading-4 text-[#6b7280] lg:grid">
           <TableHead className="justify-start pl-6">Descrição</TableHead>
           <TableHead>Data</TableHead>
           <TableHead>Categoria</TableHead>
@@ -425,33 +514,49 @@ function TransactionsScreen({
           {!isLoading && filteredTransactions.length === 0 ? (
             <PanelEmpty label="Nenhuma transação encontrada." />
           ) : null}
-          {!isLoading && filteredTransactions.map((transaction) => (
+          {!isLoading && visibleTransactions.map((transaction) => (
             <TransactionTableRow
               category={categoriesById.get(transaction.categoryId)}
               key={transaction.id}
-              onDelete={() => onDeleteTransaction(transaction.id)}
+              onDelete={() => onDeleteTransaction(transaction)}
               onEdit={() => onEditTransaction(transaction)}
               transaction={transaction}
             />
           ))}
         </div>
 
-        <footer className="flex min-h-[72px] items-center justify-between border-t border-[#e5e7eb] px-6 max-sm:flex-col max-sm:items-start max-sm:gap-4 max-sm:py-4">
-          <span className="text-sm leading-5 text-[#374151]">
-            {filteredTransactions.length === 0 ? '0 resultados' : `1 a ${filteredTransactions.length} | ${filteredTransactions.length} resultados`}
-          </span>
-          <div className="flex gap-2">
-            <PaginationButton disabled>
-              <ArrowLeft size={16} />
-            </PaginationButton>
-            <PaginationButton active>1</PaginationButton>
-            <PaginationButton>2</PaginationButton>
-            <PaginationButton>3</PaginationButton>
-            <PaginationButton>
-              <ArrowRight size={16} />
-            </PaginationButton>
-          </div>
-        </footer>
+        {shouldShowResultsCount ? (
+          <footer className="flex min-h-[72px] items-center justify-between border-t border-[#e5e7eb] px-6 max-sm:flex-col max-sm:items-start max-sm:gap-4 max-sm:py-4">
+            <span className="text-sm leading-5 text-[#374151]">
+              {firstVisibleItem} a {lastVisibleItem} | {filteredTransactions.length} resultados
+            </span>
+            {shouldShowPagination ? (
+              <div className="flex gap-2">
+                <PaginationButton
+                  disabled={currentPage === 1}
+                  onClick={() => setPage((current) => Math.max(current - 1, 1))}
+                >
+                  <ArrowLeft size={16} />
+                </PaginationButton>
+                {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+                  <PaginationButton
+                    active={pageNumber === currentPage}
+                    key={pageNumber}
+                    onClick={() => setPage(pageNumber)}
+                  >
+                    {pageNumber}
+                  </PaginationButton>
+                ))}
+                <PaginationButton
+                  disabled={currentPage === totalPages}
+                  onClick={() => setPage((current) => Math.min(current + 1, totalPages))}
+                >
+                  <ArrowRight size={16} />
+                </PaginationButton>
+              </div>
+            ) : null}
+          </footer>
+        ) : null}
       </section>
     </section>
   )
@@ -461,7 +566,7 @@ type CategoriesScreenProps = {
   categories: Category[]
   isLoading: boolean
   onCreateCategory: () => void
-  onDeleteCategory: (id: string) => void
+  onDeleteCategory: (category: Category) => void
   onEditCategory: (category: Category) => void
   transactionsCount: number
 }
@@ -512,7 +617,7 @@ function CategoriesScreen({
           <CategoryCard
             category={category}
             key={category.id}
-            onDelete={() => onDeleteCategory(category.id)}
+            onDelete={() => onDeleteCategory(category)}
             onEdit={() => onEditCategory(category)}
           />
         ))}
@@ -523,11 +628,29 @@ function CategoriesScreen({
 
 type ProfileScreenProps = {
   initials: string
+  isSaving: boolean
   onLogout: () => void
+  onUpdateProfile: (input: UpdateProfileInput) => Promise<void>
   user: User
 }
 
-function ProfileScreen({ initials, onLogout, user }: ProfileScreenProps) {
+function ProfileScreen({ initials, isSaving, onLogout, onUpdateProfile, user }: ProfileScreenProps) {
+  const [name, setName] = useState(user.name)
+  const [feedback, setFeedback] = useState<{ tone: 'success' | 'error'; message: string } | null>(null)
+
+  async function saveProfile() {
+    setFeedback(null)
+    try {
+      await onUpdateProfile({ name })
+      setFeedback({ tone: 'success', message: 'Perfil atualizado com sucesso.' })
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        message: error instanceof Error ? error.message : 'Não foi possível atualizar o perfil.',
+      })
+    }
+  }
+
   return (
     <section className="mx-auto flex w-full max-w-[1280px] justify-center px-6 py-12 sm:px-12">
       <div className="flex w-[448px] max-w-full flex-col gap-8 rounded-xl border border-[#e5e7eb] bg-white p-[33px]">
@@ -544,20 +667,49 @@ function ProfileScreen({ initials, onLogout, user }: ProfileScreenProps) {
         <div className="h-px bg-[#e5e7eb]" />
 
         <div className="grid gap-4">
-          <FigmaInput label="Nome" value={user.name} />
-          <FigmaInput label="E-mail" value={user.email} />
+          <FigmaInput
+            icon={<UserRound size={16} strokeWidth={1.5} />}
+            label="Nome completo"
+            value={name}
+            onChange={setName}
+          />
+          <FigmaInput
+            disabled
+            helpText="O e-mail não pode ser alterado"
+            icon={<Mail size={16} strokeWidth={1.5} />}
+            label="E-mail"
+            type="email"
+            value={user.email}
+          />
         </div>
 
+        {feedback ? (
+          <p
+            className={
+              feedback.tone === 'success'
+                ? 'm-0 rounded-lg border border-[#dcfce7] bg-[#f0fdf4] px-3 py-2 text-sm font-medium text-[#15803d]'
+                : 'm-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700'
+            }
+          >
+            {feedback.message}
+          </p>
+        ) : null}
+
         <div className="grid gap-4">
-          <button className="h-12 rounded-lg bg-[#1f6f43] text-base font-medium text-white" type="button">
-            Salvar alterações
+          <button
+            className="h-12 rounded-lg bg-[#1f6f43] text-base font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+            type="button"
+            disabled={isSaving}
+            onClick={saveProfile}
+          >
+            {isSaving ? 'Salvando...' : 'Salvar alterações'}
           </button>
           <button
             className="flex h-12 items-center justify-center gap-2 rounded-lg border border-[#d1d5db] bg-white text-base font-medium text-[#374151]"
             type="button"
             onClick={onLogout}
           >
-            <LockKeyhole size={18} />
+            <LogOut className="text-[#dc2626]" size={18} />
             Sair da conta
           </button>
         </div>
@@ -663,7 +815,7 @@ function TransactionTableRow({
   const isIncome = transaction.type === 'income'
 
   return (
-    <div className="grid min-h-[72px] gap-3 border-b border-[#e5e7eb] px-4 py-4 last:border-b-0 lg:grid-cols-[414px_112px_200px_136px_200px_120px] lg:px-0 lg:py-0">
+    <div className="grid min-h-[72px] gap-3 border-b border-[#e5e7eb] px-4 py-4 last:border-b-0 lg:grid-cols-[minmax(280px,1fr)_112px_200px_136px_160px_96px] lg:gap-0 lg:px-0 lg:py-0">
       <div className="flex items-center gap-4 lg:px-6">
         <IconBadge category={category} icon={<Icon size={16} />} />
         <span className="text-base leading-6 text-[#111827]">{transaction.title}</span>
@@ -836,7 +988,7 @@ function FilterSelect({
       <span className="text-sm font-medium leading-5 text-[#374151]">{label}</span>
       <span className="relative min-w-0">
         <select
-          className="h-12 w-full appearance-none rounded-lg border border-[#d1d5db] bg-white px-[13px] py-[15px] pr-10 text-base leading-[18px] text-[#111827] outline-none transition focus:border-app-primary focus:ring-4 focus:ring-app-primary-soft"
+          className="h-12 w-full appearance-none rounded-lg border border-[#d1d5db] bg-white px-[13px] py-0 pr-10 text-base leading-6 text-[#111827] outline-none transition focus:border-app-primary focus:ring-4 focus:ring-app-primary-soft"
           value={value}
           onChange={(event) => onChange(event.target.value)}
         >
@@ -874,19 +1026,74 @@ function ApiLoadingOverlay() {
 
 function ApiErrorToast({ message }: { message: string }) {
   return (
-    <div className="fixed bottom-6 left-6 z-50 max-w-sm rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 shadow-lg">
+    <div className="animate-toast-autohide fixed bottom-6 left-6 z-50 max-w-sm rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 shadow-lg">
       {message}
     </div>
   )
 }
 
+function ConfirmDeleteDialog({
+  itemName,
+  itemType,
+  onClose,
+  onConfirm,
+}: {
+  itemName: string
+  itemType: string
+  onClose: () => void
+  onConfirm: () => Promise<void>
+}) {
+  return (
+    <Dialog
+      title={`Excluir ${itemType}`}
+      description={`Confirme se deseja excluir esta ${itemType}.`}
+      onClose={onClose}
+      panelClassName="max-w-[448px] rounded-[12px] p-[25px]"
+      titleClassName="text-base font-semibold leading-6"
+      footer={
+        <>
+          <button
+            type="button"
+            className="h-12 rounded-lg border border-[#d1d5db] bg-white px-4 text-base font-medium text-[#374151]"
+            onClick={onClose}
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            className="h-12 rounded-lg bg-[#dc2626] px-4 text-base font-medium text-white"
+            onClick={() => void onConfirm()}
+          >
+            Excluir
+          </button>
+        </>
+      }
+    >
+      <p className="text-sm leading-5 text-[#4b5563]">
+        Esta ação não poderá ser desfeita. Item selecionado:{' '}
+        <strong className="font-semibold text-[#111827]">{itemName}</strong>.
+      </p>
+    </Dialog>
+  )
+}
+
 function FigmaInput({
   asTextarea = false,
+  disabled = false,
+  helpText,
+  icon,
   label,
+  onChange,
+  type = 'text',
   value,
 }: {
   asTextarea?: boolean
+  disabled?: boolean
+  helpText?: string
+  icon?: ReactNode
   label: string
+  onChange?: (value: string) => void
+  type?: string
   value: string
 }) {
   return (
@@ -895,14 +1102,26 @@ function FigmaInput({
       {asTextarea ? (
         <textarea
           className="h-[72px] resize-none rounded-lg border border-[#d1d5db] bg-white px-[13px] py-[15px] text-base text-[#111827]"
-          defaultValue={value}
+          disabled={disabled}
+          value={value}
+          onChange={(event) => onChange?.(event.target.value)}
         />
       ) : (
-        <input
-          className="h-12 rounded-lg border border-[#d1d5db] bg-white px-[13px] py-[15px] text-base text-[#111827]"
-          defaultValue={value}
-        />
+        <span className={disabled
+          ? 'flex h-12 items-center gap-3 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-[13px] py-[15px]'
+          : 'flex h-12 items-center gap-3 rounded-lg border border-[#d1d5db] bg-white px-[13px] py-[15px]'
+        }>
+          {icon ? <span className="grid h-4 w-4 shrink-0 place-items-center text-[#9ca3af]">{icon}</span> : null}
+          <input
+            className="min-w-0 flex-1 bg-transparent text-base text-[#111827] outline-none disabled:cursor-not-allowed disabled:text-[#6b7280]"
+            disabled={disabled}
+            type={type}
+            value={value}
+            onChange={(event) => onChange?.(event.target.value)}
+          />
+        </span>
       )}
+      {helpText ? <span className="text-xs font-normal leading-4 text-[#6b7280]">{helpText}</span> : null}
     </label>
   )
 }
@@ -919,7 +1138,8 @@ function PaginationButton({
   active = false,
   children,
   disabled = false,
-}: PropsWithChildren<{ active?: boolean; disabled?: boolean }>) {
+  onClick,
+}: PropsWithChildren<{ active?: boolean; disabled?: boolean; onClick?: () => void }>) {
   return (
     <button
       className={
@@ -929,6 +1149,7 @@ function PaginationButton({
       }
       disabled={disabled}
       type="button"
+      onClick={onClick}
     >
       {children}
     </button>
@@ -1001,4 +1222,13 @@ function getPeriodOptions(transactions: Transaction[]) {
         value: period,
       }
     })
+}
+
+function sortTransactionsByDate(transactions: Transaction[]) {
+  return [...transactions].sort((firstTransaction, secondTransaction) => {
+    const firstDate = new Date(firstTransaction.date).getTime()
+    const secondDate = new Date(secondTransaction.date).getTime()
+
+    return secondDate - firstDate
+  })
 }

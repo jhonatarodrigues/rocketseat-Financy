@@ -60,3 +60,21 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+@keyframes toast-autohide {
+  0%,
+  80% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  100% {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px);
+  }
+}
+
+.animate-toast-autohide {
+  animation: toast-autohide 4s ease forwards;
+}

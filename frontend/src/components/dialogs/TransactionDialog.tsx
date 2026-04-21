@@ -1,13 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
-import { CircleArrowDown, CircleArrowUp } from 'lucide-react'
+import { ChevronDown, CircleArrowDown, CircleArrowUp } from 'lucide-react'
 import {
   transactionSchema,
   type TransactionFormValues,
 } from '../../features/finance/schemas/transactionSchema'
 import { Button } from '../ui/Button'
 import { Dialog } from '../ui/Dialog'
-import { Field, Input, Select } from '../ui/Field'
+import { Field, Input } from '../ui/Field'
 import type { Category, Transaction, TransactionInput } from '../../types/finance'
 
 type TransactionDialogProps = {
@@ -21,7 +21,7 @@ const initialForm: TransactionInput = {
   title: '',
   amount: 0,
   type: 'expense',
-  date: '',
+  date: getTodayInputValue(),
   categoryId: '',
 }
 
@@ -146,14 +146,35 @@ export function TransactionDialog({
         </div>
 
         <Field label="Categoria" error={errors.categoryId?.message}>
-          <Select hasError={Boolean(errors.categoryId)} {...register('categoryId')}>
-            <option value="">Selecione</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </Select>
+          <Controller
+            control={control}
+            name="categoryId"
+            render={({ field }) => (
+              <span className="relative block">
+                <select
+                  className={
+                    errors.categoryId
+                      ? `h-12 w-full appearance-none rounded-lg border border-app-danger bg-white px-[13px] py-0 pr-10 text-base leading-6 outline-none transition focus:border-app-primary focus:ring-4 focus:ring-app-primary-soft ${field.value ? 'text-[#111827]' : 'text-[#9ca3af]'}`
+                      : `h-12 w-full appearance-none rounded-lg border border-[#d1d5db] bg-white px-[13px] py-0 pr-10 text-base leading-6 outline-none transition focus:border-app-primary focus:ring-4 focus:ring-app-primary-soft ${field.value ? 'text-[#111827]' : 'text-[#9ca3af]'}`
+                  }
+                  value={field.value}
+                  onBlur={field.onBlur}
+                  onChange={field.onChange}
+                >
+                  <option value="">Selecione</option>
+                  {categories.map((category) => (
+                    <option className="text-[#111827]" key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  className="pointer-events-none absolute right-[13px] top-1/2 -translate-y-1/2 text-[#4b5563]"
+                  size={16}
+                />
+              </span>
+            )}
+          />
         </Field>
       </form>
     </Dialog>
@@ -176,6 +197,10 @@ function toDateInputValue(date: string) {
   }
 
   return parsedDate.toISOString().slice(0, 10)
+}
+
+function getTodayInputValue() {
+  return new Date().toISOString().slice(0, 10)
 }
 
 function formatCurrencyMask(value: number) {
