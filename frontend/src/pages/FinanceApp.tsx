@@ -636,15 +636,20 @@ type ProfileScreenProps = {
 
 function ProfileScreen({ initials, isSaving, onLogout, onUpdateProfile, user }: ProfileScreenProps) {
   const [name, setName] = useState(user.name)
-  const [feedback, setFeedback] = useState<{ tone: 'success' | 'error'; message: string } | null>(null)
+  const [toast, setToast] = useState<{ id: number; tone: 'success' | 'error'; message: string } | null>(null)
 
   async function saveProfile() {
-    setFeedback(null)
+    setToast(null)
     try {
       await onUpdateProfile({ name })
-      setFeedback({ tone: 'success', message: 'Perfil atualizado com sucesso.' })
+      setToast({
+        id: Date.now(),
+        tone: 'success',
+        message: 'Perfil atualizado com sucesso.',
+      })
     } catch (error) {
-      setFeedback({
+      setToast({
+        id: Date.now(),
         tone: 'error',
         message: error instanceof Error ? error.message : 'Não foi possível atualizar o perfil.',
       })
@@ -683,18 +688,6 @@ function ProfileScreen({ initials, isSaving, onLogout, onUpdateProfile, user }: 
           />
         </div>
 
-        {feedback ? (
-          <p
-            className={
-              feedback.tone === 'success'
-                ? 'm-0 rounded-lg border border-[#dcfce7] bg-[#f0fdf4] px-3 py-2 text-sm font-medium text-[#15803d]'
-                : 'm-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700'
-            }
-          >
-            {feedback.message}
-          </p>
-        ) : null}
-
         <div className="grid gap-4">
           <button
             className="h-12 rounded-lg bg-[#1f6f43] text-base font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
@@ -714,6 +707,8 @@ function ProfileScreen({ initials, isSaving, onLogout, onUpdateProfile, user }: 
           </button>
         </div>
       </div>
+
+      {toast ? <ApiToast key={toast.id} message={toast.message} tone={toast.tone} /> : null}
     </section>
   )
 }
@@ -1025,8 +1020,18 @@ function ApiLoadingOverlay() {
 }
 
 function ApiErrorToast({ message }: { message: string }) {
+  return <ApiToast message={message} tone="error" />
+}
+
+function ApiToast({ message, tone }: { message: string; tone: 'error' | 'success' }) {
   return (
-    <div className="animate-toast-autohide fixed bottom-6 left-6 z-50 max-w-sm rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 shadow-lg">
+    <div
+      className={
+        tone === 'success'
+          ? 'animate-toast-autohide fixed bottom-6 left-6 z-50 max-w-sm rounded-lg border border-[#dcfce7] bg-[#f0fdf4] px-4 py-3 text-sm font-medium text-[#15803d] shadow-lg'
+          : 'animate-toast-autohide fixed bottom-6 left-6 z-50 max-w-sm rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 shadow-lg'
+      }
+    >
       {message}
     </div>
   )
